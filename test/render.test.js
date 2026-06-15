@@ -62,12 +62,13 @@ let threwInLoop = false;
 try { for (let i = 0; i < 5; i++) frame(16); } catch (e) { threwInLoop = true; console.log('   loop error: ' + e.message); }
 ok(!threwInLoop, 'render loop runs without throwing');
 
-// simulate a drop via a pointer event, then pump frames
+// simulate a drop: press to aim, release to drop (the aim model), then pump frames
 const pd = new window.Event('pointerdown'); pd.clientX = 180; pd.clientY = 50;
+const pu = new window.Event('pointerup'); pu.clientX = 180; pu.clientY = 50;
 let threwOnInput = false;
-try { canvas.dispatchEvent(pd); for (let i = 0; i < 10; i++) frame(16); } catch (e) { threwOnInput = true; console.log('   input error: ' + e.message); }
+try { canvas.dispatchEvent(pd); canvas.dispatchEvent(pu); for (let i = 0; i < 10; i++) frame(16); } catch (e) { threwOnInput = true; console.log('   input error: ' + e.message); }
 ok(!threwOnInput, 'pointer input + simulated frames run without throwing');
-ok(G.world.bodies.length >= 1, 'a pointer tap dropped a body into the field');
+ok(G.world.bodies.length >= 1, 'press-to-aim, release-to-drop puts a body into the field');
 
 // force a couple of merges and confirm the HUD score element updates
 G.world.bodies = [

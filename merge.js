@@ -312,12 +312,29 @@
     const rect = canvas.getBoundingClientRect();
     return (clientX - rect.left - offX) / scale;
   }
-  canvas.addEventListener('pointermove', e => { if (world.current) moveCurrent(toField(e.clientX)); });
+  // Aim model: press/drag to position the piece, release to drop. A mouse can
+  // also hover-aim before pressing (touch has no hover, so it aims while held).
+  // A simple tap is just press+release at one spot, so it still drops there.
+  let aiming = false;
+  canvas.addEventListener('pointermove', e => {
+    if (world.current && (aiming || e.pointerType === 'mouse')) moveCurrent(toField(e.clientX));
+  });
   canvas.addEventListener('pointerdown', e => {
-    if (world.over) return;
+    if (world.over || !world.current) return;
+    aiming = true;
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    moveCurrent(toField(e.clientX));
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointerup', e => {
+    if (!aiming) return;
+    aiming = false;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    if (world.over || !world.current) return;
     moveCurrent(toField(e.clientX));
     if (dropCurrent()) blip(220, 0.05, 'square', 0.12);
   });
+  canvas.addEventListener('pointercancel', () => { aiming = false; });
   window.addEventListener('keydown', e => {
     if (!world.current) return;
     if (e.key === 'ArrowLeft') moveCurrent(world.current.x - 18);
