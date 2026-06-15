@@ -172,6 +172,46 @@ ok(G.state.nextMilestone === 1, 'milestones do not re-fire for the same threshol
 G.state.coins = 2e6; G.addCoins(0);
 ok(G.state.nextMilestone === 4, 'jumping to 2,000,000 advances past 1e3/1e4/1e5/1e6');
 
+// --- 13. prestige: gated, grants stardust, resets the run, keeps stardust -
+G.state.coins = 0; G.state.runEarned = 0; G.state.stardust = 0; G.state.prestiges = 0;
+G.state.tapPower = 5; G.upgrades.find(u => u.id === 'power').level = 4;
+ok(G.prestige() === false, 'cannot ascend before earning the minimum this run');
+ok(G.state.stardust === 0, 'failed ascend grants no stardust');
+
+G.state.runEarned = 4e6;                            // 4,000,000 this run
+const expectDust = G.stardustFor(4e6);             // floor(10*sqrt(4)) = 20
+ok(expectDust === 20, 'stardustFor(4,000,000) = 20 (got ' + expectDust + ')');
+const didAscend = G.prestige();
+ok(didAscend === true, 'ascend succeeds once the minimum is met');
+ok(G.state.stardust === 20, 'ascend grants the computed stardust');
+ok(G.state.prestiges === 1, 'prestige count incremented');
+ok(G.state.coins === 0 && G.state.runEarned === 0, 'ascend resets coins and run earnings');
+ok(G.state.tapPower === 1, 'ascend resets tapPower to base');
+ok(G.upgrades.find(u => u.id === 'power').level === 0, 'ascend resets real upgrade levels');
+
+// --- 14. stardust gives a permanent, deterministic global multiplier ------
+ok(Math.abs(G.globalMult() - (1 + 20 * 0.03)) < 1e-9, 'globalMult = 1 + stardust*3% (got ' + G.globalMult().toFixed(2) + ')');
+G.state.combo = 0; G.state.lastTap = -Infinity; G.state.tapCount = 0;
+G.state.coins = 0; clock = 200000;
+G.doTap(200, 400);                                  // base 1 tap * 1.6x mult
+ok(G.state.coins === Math.ceil(1 * G.globalMult()), 'stardust multiplier applies to tap earnings (got ' + G.state.coins + ')');
+
+// --- 15. unfolding parody: items stay locked until enough prestiges -------
+const whale = G.upgrades.find(u => u.id === 'whale');
+ok(whale.unlockAt === 3, 'the "Whale Package" parody unlocks at prestige 3');
+ok(whale.cost(whale) === 0, 'even gated parody items are free ($999.99 is fake)');
+
+// --- 16. honest daily bonus: once per cooldown, then blocked --------------
+G.state.lastDaily = 0; G.state.coins = 0;
+ok(G.claimDaily() === true, 'first daily bonus can be claimed');
+ok(G.claimDaily() === false, 'daily bonus is blocked until the cooldown passes (no farming)');
+
+// --- 17. analytics are recorded locally ----------------------------------
+const tapsBefore = G.stats.taps;
+G.state.lastTap = -Infinity; G.doTap(200, 400);
+ok(G.stats.taps === tapsBefore + 1, 'taps are counted in local analytics');
+ok(typeof G.stats.sessions === 'number' && G.stats.sessions >= 1, 'sessions are tracked');
+
 // --- summary -------------------------------------------------------------
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

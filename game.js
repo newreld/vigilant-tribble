@@ -21,12 +21,26 @@
     muted: false,
     nextMilestone: 0,   // index into MILESTONES
     lastSeen: 0,        // epoch ms, for offline idle earnings
+    stardust: 0,        // prestige currency -> permanent global multiplier
+    prestiges: 0,       // how many times you've ascended
+    totalEarned: 0,     // lifetime coins earned (never reset)
+    runEarned: 0,       // coins earned this run (reset on prestige)
+    lastDaily: 0,       // epoch ms of last daily bonus claim
   };
 
   // legible progress goals -> extra dopamine moments (lever 4 + 6)
   const MILESTONES = [1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e12, 1e15];
   const SAVE_KEY = 'megatap.save.v1';
+  const STATS_KEY = 'megatap.stats.v1';
   const OFFLINE_CAP_SEC = 2 * 3600; // generous but bounded: up to 2h of idle income
+  const PRESTIGE_MIN = 1e6;         // can't ascend before earning this (this run)
+  const STARDUST_PCT = 0.03;        // each stardust = +3% to all coin gains
+  const DAILY_COOLDOWN = 20 * 3600 * 1000; // honest daily bonus, no streak guilt
+
+  // permanent multiplier from prestige (honest, deterministic)
+  const globalMult = () => 1 + state.stardust * STARDUST_PCT;
+  // stardust you'd get for ascending right now
+  const stardustFor = run => Math.floor(10 * Math.sqrt(Math.max(0, run) / PRESTIGE_MIN));
 
   const COMBO_WINDOW = 1100;   // ms to keep a combo alive
   const COMBO_STEP = 0.12;     // combo multiplier growth per chained tap
@@ -66,6 +80,22 @@
       base: 0, level: 0, max: 1, free: true,
       cost: () => 0,
       apply: () => toast('Timer skipped instantly! Premium feels good, huh? ⚡') },
+
+    // ---- parody items that UNLOCK as you ascend (renewable humor) ----
+    { id: 'battlepass', icon: '🎟️', name: 'Battle Pass (Season ∞)', desc: 'all 999 tiers, unlocked free. no grind, no $.',
+      base: 0, level: 0, max: 999, free: true, unlockAt: 1,
+      cost: () => 0,
+      apply: () => { const b = Math.ceil((1000 + state.tapPower * 300) * globalMult()); addCoins(b, true); toast('🎟️ All 999 tiers claimed! +' + fmt(b) + ' (no FOMO here)'); } },
+
+    { id: 'vip', icon: '👑', name: 'VIP Status', desc: 'congrats! everyone is VIP. perks for all, forever.',
+      base: 0, level: 0, max: 1, free: true, unlockAt: 2,
+      cost: () => 0,
+      apply: () => toast('👑 You are now VIP! So is everyone else. Equality! ') },
+
+    { id: 'whale', icon: '🐋', name: 'Whale Package — $999.99', desc: 'price is fake. it is free. whales deserve a break too.',
+      base: 0, level: 0, max: 999, free: true, unlockAt: 3,
+      cost: () => 0,
+      apply: () => { const b = Math.ceil((5000 + state.coins * 0.25) * globalMult()); addCoins(b, true); toast('🐋 SPLASH! +' + fmt(b) + ' coins. You paid $0.00. 💙'); } },
   ];
 
   // ---- DOM refs ------------------------------------------------------------
@@ -77,6 +107,7 @@
     shop: $('shop'), play: $('play'), floaters: $('floaters'),
     jackpot: $('jackpot'), reels: document.querySelectorAll('.reel'),
     offer: $('offer'), muteBtn: $('muteBtn'), toast: $('toast'),
+    stardust: $('stardust'), ascend: $('ascend'),
   };
 
   // ---- audio (procedural; no asset files needed) ---------------------------
@@ -175,6 +206,8 @@
   // ---- core: earning -------------------------------------------------------
   function addCoins(amt, silent) {
     state.coins += amt;
+    state.totalEarned += amt;
+    state.runEarned += amt;
     el.coins.textContent = fmt(state.coins);
     el.coins.classList.remove('bump'); void el.coins.offsetWidth; el.coins.classList.add('bump');
     checkMilestone();
@@ -218,8 +251,9 @@
     const frenzyMult = state.frenzyActive ? 5 : 1;
     const goldenMult = golden ? 10 : 1;
 
-    const gain = Math.ceil(state.tapPower * state.comboMult * goldenMult * frenzyMult);
+    const gain = Math.ceil(state.tapPower * state.comboMult * goldenMult * frenzyMult * globalMult());
     addCoins(gain);
+    stats.taps++;
 
     // feedback / juice scaled to combo (lever 1: game feel)
     const intensity = Math.min(state.combo, 30);
@@ -269,7 +303,8 @@
   function winJackpot() {
     // celebratory ascending arpeggio
     [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, 0.16, 'triangle', 0.2), i * 110));
-    const reward = Math.ceil((100 + state.coins * 0.15) + state.tapPower * 50);
+    stats.jackpots++;
+    const reward = Math.ceil(((100 + state.coins * 0.15) + state.tapPower * 50) * globalMult());
     setTimeout(() => {
       addCoins(reward);
       for (let i = 0; i < 6; i++)
@@ -311,7 +346,7 @@
 
   setInterval(() => {                          // auto-tapper idle income (1/sec)
     const lvl = upgrades.find(u => u.id === 'auto').level;
-    if (lvl > 0) addCoins(lvl * 2 * (state.frenzyActive ? 5 : 1));
+    if (lvl > 0) addCoins(Math.ceil(lvl * 2 * (state.frenzyActive ? 5 : 1) * globalMult()));
   }, 1000);
 
   // periodically dangle the parody "free offer"
@@ -326,6 +361,7 @@
   function renderShop() {
     el.shopList.innerHTML = '';
     upgrades.forEach(u => {
+      if (u.unlockAt != null && state.prestiges < u.unlockAt) return; // unfolds with prestige
       const cost = u.cost(u);
       const maxed = u.level >= u.max && !u.free;
       const item = document.createElement('div');
@@ -409,6 +445,9 @@
       const data = {
         coins: state.coins, tapPower: state.tapPower, muted: state.muted,
         nextMilestone: state.nextMilestone, lastSeen: Date.now(),
+        stardust: state.stardust, prestiges: state.prestiges,
+        totalEarned: state.totalEarned, runEarned: state.runEarned,
+        lastDaily: state.lastDaily,
         levels: Object.fromEntries(upgrades.map(u => [u.id, u.level])),
       };
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -424,6 +463,11 @@
     state.muted = !!data.muted;
     state.nextMilestone = data.nextMilestone || 0;
     state.lastSeen = data.lastSeen || 0;
+    state.stardust = data.stardust || 0;
+    state.prestiges = data.prestiges || 0;
+    state.totalEarned = data.totalEarned || 0;
+    state.runEarned = data.runEarned || 0;
+    state.lastDaily = data.lastDaily || 0;
     if (data.levels) upgrades.forEach(u => { if (data.levels[u.id] != null) u.level = data.levels[u.id]; });
     // re-apply real, level-scaled upgrade effects (tapPower is stored directly)
     el.muteBtn.textContent = state.muted ? '🔇' : '🔊';
@@ -435,25 +479,96 @@
     const autoLvl = upgrades.find(u => u.id === 'auto').level;
     if (!state.lastSeen || autoLvl <= 0) return;
     const elapsedSec = Math.min(OFFLINE_CAP_SEC, Math.max(0, (Date.now() - state.lastSeen) / 1000));
-    const earned = Math.floor(elapsedSec * autoLvl * 2);
+    const earned = Math.floor(elapsedSec * autoLvl * 2 * globalMult());
     if (earned > 0) {
       addCoins(earned, true);
       setTimeout(() => toast('🤖 Welcome back! Your robots earned ' + fmt(earned) + ' coins while you were gone.'), 400);
     }
   }
 
+  // ---- prestige / ascension (the real long-arc progression) ----------------
+  const canPrestige = () => state.runEarned >= PRESTIGE_MIN;
+
+  function updateStardust() {
+    if (el.stardust) el.stardust.textContent = state.stardust > 0 ? fmt(state.stardust) : '0';
+  }
+
+  function prestige() {
+    if (!canPrestige()) {
+      toast('Earn ' + fmt(PRESTIGE_MIN) + ' this run to ascend (you have ' + fmt(state.runEarned) + ')');
+      return false;
+    }
+    const gained = stardustFor(state.runEarned);
+    state.stardust += gained;
+    state.prestiges += 1;
+    stats.prestiges++;
+    // reset the run: coins + the three real upgrades. Keep stardust, prestige
+    // count, and any parody unlocks. (Honest: clearly a fresh, more powerful run.)
+    state.coins = 0; state.runEarned = 0; state.combo = 0; state.comboMult = 1;
+    state.frenzy = 0; state.frenzyActive = false; state.tapPower = 1; state.nextMilestone = 0;
+    document.body.id = '';
+    ['power', 'combo', 'auto'].forEach(id => { upgrades.find(u => u.id === id).level = 0; });
+    el.coins.textContent = '0';
+    el.frenzyFill.style.width = '0%';
+    updateStardust();
+    [392, 523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, 0.18, 'triangle', 0.2), i * 90));
+    for (let i = 0; i < 8; i++)
+      setTimeout(() => burst(innerWidth * Math.random(), innerHeight * Math.random() * 0.6 + 100, 40, 280), i * 50);
+    addShake(20);
+    toast('✨ ASCENDED! +' + gained + ' stardust → permanent +' +
+          Math.round(gained * STARDUST_PCT * 100) + '% to everything.');
+    renderShop();
+    save();
+    return true;
+  }
+
+  // ---- honest daily bonus (no streak guilt, no FOMO) -----------------------
+  function claimDaily() {
+    if (state.lastDaily && Date.now() - state.lastDaily < DAILY_COOLDOWN) return false;
+    const repeat = state.lastDaily > 0;
+    state.lastDaily = Date.now();
+    const bonus = Math.ceil((300 + state.tapPower * 200) * globalMult());
+    addCoins(bonus, true);
+    el.coins.textContent = fmt(state.coins);
+    if (repeat) setTimeout(() => toast('🎁 Daily gift: +' + fmt(bonus) + '! Come back whenever — no streak to lose.'), 800);
+    return true;
+  }
+
+  // ---- analytics (local-only, privacy-respecting; ready for validation) -----
+  function loadStats() {
+    let s; try { s = JSON.parse(localStorage.getItem(STATS_KEY)); } catch (e) { s = null; }
+    return s || { sessions: 0, taps: 0, jackpots: 0, prestiges: 0,
+                  maxCoins: 0, firstSeen: Date.now(), lastSeen: 0, playMs: 0 };
+  }
+  let sessionStart = Date.now();
+  function saveStats() {
+    const now = Date.now();
+    stats.playMs += now - sessionStart; sessionStart = now;
+    stats.maxCoins = Math.max(stats.maxCoins, Math.floor(state.totalEarned));
+    stats.lastSeen = now;
+    try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) {}
+  }
+  const stats = loadStats();
+
   // ---- boot ----------------------------------------------------------------
+  stats.sessions++;
   const hadSave = load();
   applyOfflineEarnings();
+  claimDaily();
+  updateStardust();
   el.coins.textContent = fmt(state.coins);
   renderShop();
   toast(hadSave ? 'Welcome back, champ! Keep tapping. 😄'
                 : 'Tap the big button! It\'s free. It\'s always free. 😄');
 
-  setInterval(save, 5000);                                  // autosave
-  addEventListener('visibilitychange', () => { if (document.hidden) save(); });
-  addEventListener('pagehide', save);
+  if (el.ascend) el.ascend.addEventListener('click', prestige);
+
+  setInterval(() => { save(); saveStats(); }, 5000);       // autosave
+  addEventListener('visibilitychange', () => { if (document.hidden) { save(); saveStats(); } });
+  addEventListener('pagehide', () => { save(); saveStats(); });
 
   // expose internals for automated smoke-testing
-  window.__megatap = { state, upgrades, doTap, addCoins, fmt, buy, save, load, applyOfflineEarnings, MILESTONES, SAVE_KEY };
+  window.__megatap = { state, upgrades, doTap, addCoins, fmt, buy, save, load,
+    applyOfflineEarnings, prestige, canPrestige, stardustFor, globalMult,
+    claimDaily, stats, MILESTONES, SAVE_KEY, STATS_KEY, PRESTIGE_MIN };
 })();

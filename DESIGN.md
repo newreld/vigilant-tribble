@@ -123,3 +123,29 @@ Filled in as we build, self-evaluate against the levers above, and improve.
   3. **Milestone celebrations** — legible long-arc goals (levers 4 + 6).
   Test suite expanded to 28 checks, all green, including assertions of the
   ethical guarantees (parody items cost 0; earning is deterministic).
+- **v0.3 — game first, joke second (a deliberate philosophy correction).**
+  Principle: *there must be a real game, with the parody as seasoning — not a
+  parody standing in for a game.* A joke is a first-session delight, never a
+  retention mechanic. So this iteration invests in genuine game depth:
+  1. **Prestige / Ascension** — reset a run for permanent **Stardust**, which
+     grants a deterministic global multiplier (+3% each). This is the proven,
+     fully honest long-arc progression engine that clickers retain on.
+  2. **Unfolding parody as *content*, not a one-off gag** — new parody items
+     (Battle Pass, VIP, Whale Package) **unlock as you ascend**, so the humor
+     keeps giving rather than expiring after session one. The jokes now ride on
+     top of real progression instead of substituting for it.
+  3. **Honest return hooks** — a transparent daily bonus (cooldown-gated, no
+     streak guilt, no FOMO).
+  4. **Local, privacy-respecting analytics** — sessions/taps/jackpots/prestiges/
+     playtime/max-progress stored locally, so retention is *measurable* the
+     moment the game reaches real players (validation-ready).
+  Test suite now 45 checks, all green.
+
+## 5. Open question the owner is still chasing
+
+Is the underlying *game* — tap → combo → frenzy → upgrade → ascend — actually
+fun enough on its own that someone returns tomorrow **without** the joke? The
+joke is differentiation and marketing; it is not the reason to keep playing.
+The next real work is validating (and, if needed, deepening) the core loop so it
+stands on its own. See README's "Test it" for the instrumentation that makes
+that measurable.

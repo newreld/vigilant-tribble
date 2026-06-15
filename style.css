@@ -159,6 +159,16 @@ html, body {
 .buy:disabled { background: #777; box-shadow: 0 4px 0 #444; color: #ccc; cursor: not-allowed; }
 .buy.free { background: var(--gold); box-shadow: 0 4px 0 #b8860b; }
 
+#ascend {
+  display: block; width: 100%; margin-bottom: 14px; padding: 14px;
+  border: none; border-radius: 14px; cursor: pointer;
+  font-family: inherit; font-weight: bold; font-size: 18px; color: #fff;
+  background: linear-gradient(90deg, #7b2ff7, #21e6c1);
+  box-shadow: 0 5px 0 #4a1a93; text-shadow: 0 2px 0 rgba(0,0,0,.3);
+}
+#ascend:active { transform: translateY(3px); box-shadow: 0 2px 0 #4a1a93; }
+#ascend small { display: block; font-size: 11px; font-weight: normal; opacity: .9; margin-top: 2px; }
+
 /* jackpot overlay */
 #jackpot {
   position: absolute; inset: 0; z-index: 20;
