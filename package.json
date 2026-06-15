@@ -4,6 +4,7 @@
   "description": "A physics merge game (Suika lineage) themed in space: a genuinely good, return-to-it game with zero dark patterns, monetization, or gambling.",
   "scripts": {
     "test": "node test/cosmic.test.js && node test/render.test.js",
+    "play": "node test/play.js",
     "test:archive": "node archive/tap-clicker/test/smoke.test.js",
     "start": "node -e \"require('http').createServer((q,s)=>{const f=require('fs'),p=require('path');let u=q.url==='/'?'/index.html':q.url;const x={'.html':'text/html','.css':'text/css','.js':'application/javascript'}[p.extname(u)]||'text/plain';f.readFile('.'+u,(e,d)=>{if(e){s.writeHead(404);s.end()}else{s.writeHead(200,{'content-type':x});s.end(d)}})}).listen(8080,()=>console.log('http://localhost:8080'))\""
   },
