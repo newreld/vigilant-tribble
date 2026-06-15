@@ -5,22 +5,8 @@ drop and merge celestial bodies — **asteroid → comet → moon → planet →
 planet → dwarf star → star → galaxy → black hole** — and merge two black holes
 to trigger a **BIG BANG** that clears the board for a huge bonus.
 
-It's the **"too good to be true"** version of the games whose ads overpromise:
-it actually delivers the satisfying thing (chunky physics merges, the "one more
-run" pull, a high-score chase) and there is **no catch** —
-
 > **No ads. No in-app purchases. No energy/lives timers. No loot-box gambling.
 > No catch. Just merge.**
-
-## Why this game
-
-Picked deliberately for *top-100 potential as a solo build*. Suika Game proved
-the formula: **"understand in seconds, master in hours,"** physics-satisfying,
-low-pressure, cute and non-threatening — and it went viral on streams with
-**zero ad spend**, which is the only realistic path to the charts without a
-marketing budget. It's also loop-based, not content-based, so it doesn't need
-hundreds of hand-authored levels to stay fresh. Full rationale and the
-psychology research are in [DESIGN.md](DESIGN.md).
 
 ## How to play
 
@@ -63,6 +49,12 @@ npm test         # physics-core tests + DOM/render smoke test
 | `index.html`          | Structure / HUD / game-over overlay                      |
 | `merge.css`           | Calm space theme + UI                                    |
 | `merge.js`            | Engine: testable physics core + render/input/audio layer |
-| `DESIGN.md`           | Research, the pivot rationale, and the iteration log     |
 | `test/`               | Headless core test + jsdom render test                   |
-| `archive/tap-clicker` | An earlier experiment (an honest-dopamine *clicker*); kept for reference — too shallow for the top-100 goal, which is why we pivoted to merge. |
+| `GOAL.md`             | The project's goal and concept (the "why")               |
+| `DESIGN.md`           | Research, the design rationale, and the iteration log    |
+| `archive/tap-clicker` | An earlier experiment, kept for reference                |
+
+---
+
+*What this game is trying to be, and why, lives in [GOAL.md](GOAL.md); the
+full research and design log is in [DESIGN.md](DESIGN.md).*
