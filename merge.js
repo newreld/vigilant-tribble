@@ -31,6 +31,146 @@
   // triangular-ish scoring: bigger merges are worth disproportionately more
   const POINTS = TIERS.map((_, t) => t === 0 ? 0 : (t * (t + 1)) / 2 * 10);
 
+  // ========================================================================
+  // Procedural celestial-body art. A PURE pixel function over normalized
+  // coords nx,ny in [-1,1]: |(nx,ny)|<=1 is the body; out to GLOW_MAX is glow.
+  // Shared by the in-game sprite baker AND the offline preview tool, so what
+  // you preview is exactly what renders in the game. No emoji, real contrast.
+  // ========================================================================
+  const GLOW_MAX = 1.85;
+  const TIER_ART = [
+    // a = lit color, b = shadow color, glow = halo color, gs = glow strength
+    { type: 'rock',   a: [0.66, 0.58, 0.49], b: [0.16, 0.13, 0.11], glow: [0.0, 0.0, 0.0],  gs: 0.0,  accent: '#c4a888' },
+    { type: 'ice',    a: [0.85, 0.97, 1.00], b: [0.13, 0.46, 0.70], glow: [0.45, 0.85, 1.0], gs: 0.75, accent: '#8fe3ff' },
+    { type: 'moon',   a: [0.95, 0.95, 0.99], b: [0.34, 0.35, 0.44], glow: [0.55, 0.62, 0.85], gs: 0.22, accent: '#dfe2f0' },
+    { type: 'planet', a: [0.26, 0.56, 1.00], b: [0.02, 0.10, 0.30], glow: [0.30, 0.62, 1.0], gs: 0.40, accent: '#5aa6ff' },
+    { type: 'ringed', a: [0.96, 0.80, 0.52], b: [0.42, 0.26, 0.10], glow: [0.95, 0.78, 0.45], gs: 0.20, accent: '#f0c878' },
+    { type: 'star',   a: [1.00, 0.98, 0.78], b: [1.00, 0.74, 0.20], glow: [1.0, 0.84, 0.32], gs: 1.0,  accent: '#ffe066' },
+    { type: 'star',   a: [1.00, 0.93, 0.72], b: [1.00, 0.50, 0.14], glow: [1.0, 0.52, 0.18], gs: 1.15, accent: '#ff9a3c' },
+    { type: 'galaxy', a: [0.92, 0.82, 1.00], b: [0.30, 0.16, 0.55], glow: [0.62, 0.40, 1.0], gs: 0.9,  accent: '#c79bff' },
+    { type: 'hole',   a: [0.0, 0.0, 0.0],    b: [0.0, 0.0, 0.0],    glow: [1.0, 0.55, 0.22], gs: 0.85, accent: '#ffb866' },
+  ];
+
+  const _cl = (x, a, b) => (x < a ? a : x > b ? b : x);
+  const _ss = (e0, e1, x) => { const t = _cl((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+  const _mix = (u, v, t) => [u[0] + (v[0] - u[0]) * t, u[1] + (v[1] - u[1]) * t, u[2] + (v[2] - u[2]) * t];
+  function _hash(x, y) { const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return h - Math.floor(h); }
+  function _vn(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const a = _hash(xi, yi), b = _hash(xi + 1, yi), c = _hash(xi, yi + 1), d = _hash(xi + 1, yi + 1);
+    return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * (1 - u) * v + d * u * v;
+  }
+  function _fbm(x, y) { let s = 0, a = 0.5, f = 1; for (let i = 0; i < 4; i++) { s += a * _vn(x * f, y * f); f *= 2; a *= 0.5; } return s; }
+
+  // light direction (upper-left key light)
+  const LX = -0.42, LY = -0.52, LZ = 0.74;
+
+  function _ringSample(nx, ny) {
+    const tilt = 0.40, RIN = 1.24, ROUT = 1.96;
+    const rho = Math.sqrt(nx * nx + (ny / tilt) * (ny / tilt));
+    if (rho < RIN || rho > ROUT) return null;
+    let a = 0.9 * (0.6 + 0.4 * _vn(rho * 60, 7));        // banding
+    if (Math.abs(rho - 1.60) < 0.07) a *= 0.18;          // Cassini-style gap
+    a *= _ss(ROUT, ROUT - 0.12, rho);                    // soft outer edge
+    const col = _mix([0.55, 0.40, 0.22], [0.98, 0.86, 0.62], _vn(rho * 30, 3));
+    return { col, a: _cl(a, 0, 1) };
+  }
+
+  // returns [r,g,b,a] each 0..255
+  function shadeBody(tier, nx, ny) {
+    const art = TIER_ART[tier];
+    const d = Math.hypot(nx, ny);
+    let col = [0, 0, 0], al = 0;
+
+    if (d <= 1.0) {
+      const nz = Math.sqrt(Math.max(0, 1 - d * d));
+      const diff = _cl(nx * LX + ny * LY + nz * LZ, 0, 1);
+      const rim = _ss(0.55, 1.0, d) * (0.35 + 0.65 * (1 - diff));
+      const limb = 0.85 + 0.15 * nz;
+
+      if (art.type === 'rock') {
+        const m = _fbm(nx * 3.5 + 9, ny * 3.5);
+        let base = _mix(art.b, art.a, 0.35 + 0.65 * m);
+        const cr = _fbm(nx * 6 + 2, ny * 6 + 4);
+        if (cr > 0.72) base = base.map(c => c * 0.6);
+        col = base.map(c => c * (0.2 + diff * 0.95));
+        col = _mix(col, [0.7, 0.65, 0.6], rim * 0.5);
+      } else if (art.type === 'moon') {
+        let base = _mix(art.b, art.a, 0.55 + 0.45 * _fbm(nx * 2.5 + 1, ny * 2.5));
+        const cr = _fbm(nx * 5 + 7, ny * 5 + 2);
+        if (cr > 0.66) base = base.map(c => c * 0.7);
+        col = base.map(c => c * (0.16 + diff * 1.0));
+        col = _mix(col, [0.8, 0.85, 1.0], rim * 0.55);
+      } else if (art.type === 'ice') {
+        let base = _mix(art.b, art.a, 0.4 + 0.6 * (1 - d));
+        col = base.map(c => c * (0.45 + diff * 0.7));
+        const spec = Math.pow(_cl(nx * LX + ny * LY + nz * LZ, 0, 1), 22);
+        col = _mix(col, [1, 1, 1], spec * 0.8);
+        col = _mix(col, [0.7, 0.95, 1.0], rim * 0.6);
+      } else if (art.type === 'planet') {
+        const land = _fbm(nx * 2.6 + 4, ny * 2.6 + 1);
+        let base = _mix(art.b, art.a, 0.45 + 0.55 * (1 - d)); // ocean
+        if (land > 0.56) base = _mix(base, [0.20, 0.58, 0.28], _ss(0.56, 0.7, land)); // land
+        if (Math.abs(ny) > 0.72) base = _mix(base, [0.92, 0.96, 1.0], _ss(0.72, 0.9, Math.abs(ny))); // ice caps
+        const cloud = _fbm(nx * 3.2 + 20, ny * 2.4 + 11);
+        base = _mix(base, [0.95, 0.97, 1.0], _ss(0.62, 0.8, cloud) * 0.7);
+        col = base.map(c => c * (0.12 + diff * 1.05));
+        col = _mix(col, [0.45, 0.7, 1.0], rim * 0.85); // atmosphere
+      } else if (art.type === 'ringed') {
+        const band = 0.5 + 0.5 * Math.sin(ny * 9 + nx * 1.5);
+        let base = _mix(art.b, art.a, 0.4 + 0.6 * band);
+        col = base.map(c => c * (0.18 + diff * 1.0));
+        col = _mix(col, [1.0, 0.9, 0.7], rim * 0.5);
+      } else if (art.type === 'star') {
+        const gran = _fbm(nx * 5 + tier, ny * 5 + 3);
+        col = _mix(art.b, art.a, 0.3 + 0.7 * gran).map(c => c * limb);
+        col = _mix(col, [1, 1, 0.95], Math.pow(1 - d, 2) * 0.6); // hot core
+      } else if (art.type === 'galaxy') {
+        const ang = Math.atan2(ny, nx);
+        const arms = 0.5 + 0.5 * Math.sin(2 * ang + d * 7.0);
+        const armGlow = Math.pow(arms, 2.2) * (1 - d) * 1.3;
+        const core = Math.pow(_cl(1 - d * 1.6, 0, 1), 2) * 1.6;
+        col = _mix(art.b, art.a, _cl(armGlow, 0, 1));
+        col = _mix(col, [1, 1, 1], _cl(core, 0, 1));
+        col = col.map((c, i) => c * (0.35 + 0.65 * _cl(armGlow + core, 0, 1)) + [0.05, 0.02, 0.1][i]);
+      } else if (art.type === 'hole') {
+        col = [0, 0, 0];
+        const ring = _ss(0.78, 0.9, d) * _ss(1.0, 0.92, d); // bright photon ring
+        col = _mix(col, [1.0, 0.78, 0.4], _cl(ring * 1.6, 0, 1));
+        const top = _ss(0.0, 0.4, ny) * _ss(0.9, 0.75, d); // lensed light arc over top
+        col = _mix(col, [1.0, 0.9, 0.7], top * 0.5);
+      }
+      al = 1;
+      if (d > 0.985) al = _ss(1.0, 0.985, d); // 1px edge feather
+    } else {
+      // glow halo
+      const t = _cl(1 - (d - 1) / (GLOW_MAX - 1), 0, 1);
+      al = art.gs * Math.pow(t, 2.4);
+      col = art.glow.slice();
+    }
+
+    let out = [col[0], col[1], col[2], al];
+    if (art.type === 'ringed') {
+      const ring = _ringSample(nx, ny);
+      if (ring) {
+        const front = ny > 0;
+        const occluded = d <= 1 && !front;
+        if (!occluded) {
+          const ta = ring.a;
+          out = [
+            ring.col[0] * ta + out[0] * (1 - ta),
+            ring.col[1] * ta + out[1] * (1 - ta),
+            ring.col[2] * ta + out[2] * (1 - ta),
+            ta + out[3] * (1 - ta),
+          ];
+        }
+      }
+    }
+    return [_cl(out[0], 0, 1) * 255, _cl(out[1], 0, 1) * 255, _cl(out[2], 0, 1) * 255, _cl(out[3], 0, 1) * 255];
+  }
+
+
   // ---- field + physics constants ------------------------------------------
   const FIELD_W = 360, FIELD_H = 600;
   const SPAWN_Y = 48;          // y of the hovering current piece
@@ -249,7 +389,8 @@
 
   // expose the headless core for tests
   const core = { world, TIERS, MAX_TIER, POINTS, FIELD_W, FIELD_H, DANGER_Y,
-    reset, step, dropCurrent, moveCurrent, spawnCurrent, pickTier, mulberry32 };
+    reset, step, dropCurrent, moveCurrent, spawnCurrent, pickTier, mulberry32,
+    TIER_ART, GLOW_MAX, shadeBody };
   if (typeof window !== 'undefined') window.__cosmic = core;
   if (typeof module !== 'undefined' && module.exports) module.exports = core;
 
@@ -262,9 +403,56 @@
   const $ = id => document.getElementById(id);
   const canvas = $('game'); if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const elScore = $('score'), elBest = $('best'), elNext = $('next-emoji');
+  const elScore = $('score'), elBest = $('best'), elNext = $('next-canvas');
   const elCombo = $('combo'), elOver = $('gameover'), elFinal = $('final-score');
   const elNewBest = $('new-best');
+
+  // ---- procedural sprite cache (bake shadeBody once per tier) --------------
+  // Each tier is rasterized to an offscreen canvas via the shared shader, then
+  // blitted. Falls back to a flat disc if 2D/ImageData is unavailable (e.g. the
+  // headless jsdom test), so the game still boots everywhere.
+  const SUP = 2; // supersample for crisp edges
+  const sprites = [];
+  function bakeSprite(tier) {
+    try {
+      const r = TIERS[tier].r, px = Math.ceil(r * GLOW_MAX * 2 * SUP);
+      const cv = document.createElement('canvas'); cv.width = px; cv.height = px;
+      const c = cv.getContext('2d'); if (!c || !c.createImageData) return null;
+      const img = c.createImageData(px, px), data = img.data, half = px / 2;
+      for (let y = 0; y < px; y++) for (let x = 0; x < px; x++) {
+        const nx = (x - half + 0.5) / (r * SUP), ny = (y - half + 0.5) / (r * SUP);
+        const s = shadeBody(tier, nx, ny), i = (y * px + x) * 4;
+        data[i] = s[0]; data[i + 1] = s[1]; data[i + 2] = s[2]; data[i + 3] = s[3];
+      }
+      c.putImageData(img, 0, 0);
+      return { cv, half: r * GLOW_MAX };
+    } catch (e) { return null; }
+  }
+  function sprite(tier) { return sprites[tier] || (sprites[tier] = bakeSprite(tier)); }
+
+  // field gradients (built once; null in stub environments → flat fallback)
+  let fieldGrad = null, sideVig = null;
+  function buildFieldGfx() {
+    try {
+      const g = ctx.createLinearGradient(0, 0, 0, FIELD_H);
+      g.addColorStop(0, 'rgba(22,20,52,0.5)'); g.addColorStop(0.55, 'rgba(11,9,30,0.5)'); g.addColorStop(1, 'rgba(4,3,14,0.62)');
+      fieldGrad = g;
+      const v = ctx.createRadialGradient(FIELD_W / 2, FIELD_H * 0.42, FIELD_W * 0.18, FIELD_W / 2, FIELD_H * 0.5, FIELD_W * 0.82);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.42)');
+      sideVig = v;
+    } catch (e) { fieldGrad = null; sideVig = null; }
+  }
+
+  // next-piece preview (mini sprite in the HUD)
+  const nctx = (elNext && elNext.getContext) ? elNext.getContext('2d') : null;
+  let nextShown = -1;
+  function drawNext() {
+    if (!nctx) return;
+    const w = elNext.width, h = elNext.height;
+    nctx.clearRect(0, 0, w, h);
+    const sp = sprite(world.next);
+    if (sp && sp.cv) { const sz = Math.min(w, h) * 0.96; nctx.drawImage(sp.cv, (w - sz) / 2, (h - sz) / 2, sz, sz); }
+  }
 
   let muted = false;
   try { world.best = parseInt(localStorage.getItem('cosmic.best') || '0', 10) || 0; } catch (e) {}
@@ -349,8 +537,7 @@
   function drainEvents() {
     for (const ev of world.events) {
       if (ev.type === 'merge') {
-        const t = TIERS[ev.tier];
-        burst(ev.x, ev.y, 8 + ev.tier * 4, t.color);
+        burst(ev.x, ev.y, 8 + ev.tier * 4, TIER_ART[ev.tier].accent);
         shake = Math.min(shake + 2 + ev.tier, 18);
         const mult = 1 + (world.combo - 1) * 0.5;
         floatScore(ev.x, ev.y, '+' + Math.round(POINTS[ev.tier] * mult), '#fff');
@@ -358,7 +545,7 @@
         if (world.combo > 1) floatScore(ev.x, ev.y - 22, 'COMBO x' + world.combo, '#ffe066');
       } else if (ev.type === 'bigbang') {
         for (let i = 0; i < 10; i++) setTimeout(() => burst(FIELD_W * Math.random(), FIELD_H * Math.random(), 40, '#fff'), i * 40);
-        shake = 26; floatScore(FIELD_W / 2, FIELD_H / 2, '💥 BIG BANG +' + ev.bonus, '#ff66cc');
+        shake = 26; floatScore(FIELD_W / 2, FIELD_H / 2, 'BIG BANG  +' + ev.bonus, '#ff8ad0');
         [262, 330, 392, 523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.2, 'triangle', 0.2), i * 90));
       } else if (ev.type === 'gameover') {
         elFinal.textContent = world.score;
@@ -374,16 +561,18 @@
 
   // ---- render -------------------------------------------------------------
   function drawBody(x, y, tier, ghost) {
-    const t = TIERS[tier], r = t.r;
+    const sp = sprite(tier);
     ctx.save();
-    ctx.globalAlpha = ghost ? 0.35 : 1;
-    // glow for high tiers
-    if (tier >= 5) { ctx.shadowColor = t.color; ctx.shadowBlur = 18; }
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = t.color; ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.font = (r * 1.4) + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(t.emoji, x, y + r * 0.05);
+    ctx.globalAlpha = ghost ? 0.42 : 1;
+    if (sp && sp.cv) {
+      const sz = sp.half * 2;
+      ctx.drawImage(sp.cv, x - sp.half, y - sp.half, sz, sz);
+    } else {
+      // fallback disc (headless/no-ImageData environments)
+      const r = TIERS[tier].r;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = TIER_ART[tier].accent; ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -394,11 +583,21 @@
     ctx.save();
     ctx.translate(offX + sx, offY + sy); ctx.scale(scale, scale);
 
-    // field background + danger line
-    ctx.fillStyle = 'rgba(10,6,30,0.6)';
-    ctx.fillRect(0, 0, FIELD_W, FIELD_H);
-    ctx.strokeStyle = 'rgba(255,80,120,0.5)'; ctx.lineWidth = 2; ctx.setLineDash([8, 8]);
+    // field background: deep-space gradient + soft side vignette
+    if (fieldGrad) {
+      ctx.fillStyle = fieldGrad; ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      ctx.fillStyle = sideVig; ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+    } else {
+      ctx.fillStyle = 'rgba(8,6,24,0.55)'; ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+    }
+    // danger line — a subtle glowing threshold, only assertive when threatened
+    const danger = world.overTimer > 0.05;
+    ctx.save();
+    ctx.strokeStyle = danger ? 'rgba(255,70,110,0.85)' : 'rgba(150,170,255,0.28)';
+    ctx.lineWidth = danger ? 2.5 : 1.5; ctx.setLineDash([7, 9]);
+    if (danger) { ctx.shadowColor = 'rgba(255,70,110,0.9)'; ctx.shadowBlur = 12; }
     ctx.beginPath(); ctx.moveTo(0, DANGER_Y); ctx.lineTo(FIELD_W, DANGER_Y); ctx.stroke();
+    ctx.restore();
     ctx.setLineDash([]);
 
     for (const b of world.bodies) drawBody(b.x, b.y, b.tier, false);
@@ -434,8 +633,8 @@
     // HUD
     elScore.textContent = world.score;
     elBest.textContent = world.best;
-    elNext.textContent = TIERS[world.next].emoji;
-    elCombo.textContent = world.combo > 1 ? 'COMBO x' + world.combo : '';
+    if (world.next !== nextShown) { drawNext(); nextShown = world.next; }
+    elCombo.textContent = world.combo > 1 ? 'COMBO ×' + world.combo : '';
   }
 
   // ---- main loop (fixed-timestep accumulator) ------------------------------
@@ -457,6 +656,9 @@
 
   // ---- boot ----------------------------------------------------------------
   resize();
+  buildFieldGfx();
+  for (let t = 0; t < TIERS.length; t++) sprite(t); // pre-bake so first frames are instant
+  drawNext();
   reset();
   requestAnimationFrame(loop);
 })();
