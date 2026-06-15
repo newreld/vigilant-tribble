@@ -141,6 +141,55 @@ Filled in as we build, self-evaluate against the levers above, and improve.
      moment the game reaches real players (validation-ready).
   Test suite now 45 checks, all green.
 
+## 6. THE PIVOT — from clicker to COSMIC MERGE (v0.4)
+
+**Owner's decision.** Goal raised to *top-100 App Store potential*: a genuinely
+good, return-to-it game; cheesy/honest take on the over-advertised genres; "too
+good to be true" — scratches the itch the ads promise, with no monetization or
+dark side. The tap-clicker (now in `archive/tap-clicker/`) is too shallow to
+clear that bar: its only real verb is "tap," and prestige deepens *progression*
+but not *play*. A clicker doesn't reach the top of the charts on merit.
+
+So the core was pivoted to a **physics merge game** (the Suika lineage), themed
+in space (a recurring thread in our discussion).
+
+**Why merge wins for this goal (research-backed):**
+- **Accessible + deep** — "understand in seconds, master in hours." Real skill
+  and planning, not autopilot. (This is the bar the user set: a game you *play*.)
+- **Loop, not arc** — procedurally endless; no hand-authored level treadmill.
+  "Games that lean on loops scale; games that lean on arcs burn out studios."
+- **Streaming-friendly → organic virality.** Suika blew up on streams with *zero*
+  ad spend. For a solo dev who can't outspend studios on user acquisition, this
+  is the only realistic route to the charts — and it fits the "honest" thesis:
+  the game spreads because it's good, not because of a manipulative funnel.
+- **Honest by construction.** Turn-paced, no clock, no energy, no IAP. The only
+  randomness is the next-piece (fair game variety, like Tetris) — never sold,
+  never gated. Tests assert this: deterministic per seed; only low tiers spawn,
+  so a win is always *built*, never handed to you.
+
+The cheesy/parody tone now rides *on top of* a real game (taglines, the cute
+emoji bodies, the "no ads, no kidding" game-over screen) instead of *being* the
+game — exactly the "game with a joke, not a joke" correction.
+
+### Sources (pivot)
+- [Suika Game — Wikipedia](https://en.wikipedia.org/wiki/Suika_Game)
+- [History of Suika Game — viral phenomenon](https://fruitmerge.one/game-history)
+- [Casual Game Loops Explained — GDevelop](https://gdevelop.io/blog/casual-game-loops)
+
+### Build/test/review log (COSMIC MERGE)
+- **v0.4** — built the engine: seedable deterministic physics core (gravity,
+  iterative collision solver, contact-merge, scoring, combos, BIG BANG, game-over)
+  + a render/input/audio layer. Headless core test (18 checks).
+- **review caught two real bugs:** (1) the collision solver separated same-tier
+  bodies to *exactly touching* before the merge check, so with a 0.90 overlap
+  threshold **nothing ever merged** — fixed to merge on contact (1.02);
+  (2) an operator-precedence bug made the drop sound `blip(0,…)` every drop —
+  fixed. Also cleaned up best-score persistence (was reading localStorage twice
+  per frame).
+- **added a jsdom render test (10 checks)** that boots the full DOM/canvas/loop
+  and simulates input — this is the layer that hid the drop-sound bug. All 28
+  checks green.
+
 ## 5. Open question the owner is still chasing
 
 Is the underlying *game* — tap → combo → frenzy → upgrade → ascend — actually

@@ -1,71 +1,68 @@
-# MEGA TAP DELUXE™
+# 🌌 COSMIC MERGE
 
-A **loving parody of heavily-advertised hyper-casual games** — all of the cheesy
-dopamine, **none** of the dark patterns. It delivers exactly what an honest ad
-would show (tap → numbers explode), and it *winks* at the genre's manipulations
-instead of using them. The whole thing is rigged **in the player's favor**.
+A physics **merge game** (the *Suika / watermelon-game* lineage), themed in space:
+drop and merge celestial bodies — **asteroid → comet → moon → planet → ringed
+planet → dwarf star → star → galaxy → black hole** — and merge two black holes
+to trigger a **BIG BANG** that clears the board for a huge bonus.
 
-This is a research-driven prototype. The "what makes it feel good and why we
-stripped the predatory parts" write-up lives in [DESIGN.md](DESIGN.md).
+It's the **"too good to be true"** version of the games whose ads overpromise:
+it actually delivers the satisfying thing (chunky physics merges, the "one more
+run" pull, a high-score chase) and there is **no catch** —
 
-## What it is
+> **No ads. No in-app purchases. No energy/lives timers. No loot-box gambling.
+> No catch. Just merge.**
 
-**Design principle: it's a *game* with a joke on top — not a joke pretending to
-be a game.** The parody is differentiation and marketing; the reason to keep
-playing is the underlying loop. A juicy tap/clicker built only from the *honest*
-dopamine levers:
+## Why this game
 
-- **Game feel / juice** — screenshake, particles, squash-and-stretch, floating
-  numbers, and rising audio pitch, all scaled to your combo.
-- **Combos** — a light timing/skill layer (deterministic, no luck).
-- **Frenzy meter** — fills as you tap toward a **guaranteed** jackpot.
-- **Prestige / Ascension** — reset a run for permanent **Stardust** multipliers;
-  the honest long-arc progression that gives a reason to return.
-- **Milestones** + **persistent progression** + **idle "welcome back" earnings**
-  + a no-guilt **daily bonus**.
-- **Local analytics** — sessions/taps/playtime tracked on-device so retention is
-  measurable (no servers, no tracking, nothing leaves your browser).
+Picked deliberately for *top-100 potential as a solo build*. Suika Game proved
+the formula: **"understand in seconds, master in hours,"** physics-satisfying,
+low-pressure, cute and non-threatening — and it went viral on streams with
+**zero ad spend**, which is the only realistic path to the charts without a
+marketing budget. It's also loop-based, not content-based, so it doesn't need
+hundreds of hand-authored levels to stay fresh. Full rationale and the
+psychology research are in [DESIGN.md](DESIGN.md).
 
-### The persiflage (parody of dark patterns)
+## How to play
 
-Everything is free and earned by play. Specifically:
+- **Move** your piece with the mouse / finger (or ← →).
+- **Drop** it by clicking / tapping (or Space / ↓).
+- Two of the **same** body that touch **merge** into the next one up.
+- Don't let the pile rest above the **danger line** for too long.
+- Chain merges for **combo** multipliers. Merge two black holes for the BIG BANG.
 
-- 🎁 **"Legendary Loot Box"** — full slot-machine fanfare that **always** lands
-  on 7-7-7. No gambling; the reward is deterministic.
-- 🚫 **"Remove Ads — $0.00"** — there were never any ads.
-- ⏩ **"Skip Timer (Premium)"** — instant and free; there was no timer.
-- 💎 Gems and ❤️ lives both just read **∞**.
-- 🎁 A "SPECIAL LIMITED OFFER" that simply *gives* you coins, forever.
-
-**No monetization. No real-money anything. No variable-ratio (gambling) rewards.**
+It's turn-paced and calm — no clock, no rush. Play a 5-minute round or chase a
+new best.
 
 ## Run it
 
-It's a static site — open `index.html` in a browser, or serve it:
+Static site — open `index.html`, or serve it:
 
 ```bash
-npm start     # serves on http://localhost:8080
+npm start        # http://localhost:8080
 ```
 
 ## Test it
 
-A headless smoke test loads the real game into a simulated DOM and exercises the
-core loop (earning, combos, the deterministic golden tap, frenzy/jackpot,
-number formatting, the shop, persistence, offline earnings, and milestones).
-It also asserts the **ethical guarantees** (parody items cost 0; identical play
-yields identical coins — i.e. earning is deterministic, not a gamble).
-
 ```bash
-npm install   # installs jsdom (dev only)
-npm test
+npm install      # jsdom (dev only)
+npm test         # physics-core tests + DOM/render smoke test
 ```
+
+- `test/cosmic.test.js` — drives the **DOM-free simulation core** deterministically:
+  gravity, walls, merging, scoring, the max-tier rule, BIG BANG, game-over
+  detection, and the fairness guarantees (deterministic per seed; you only ever
+  spawn low tiers, so a win is always *built*, never handed to you).
+- `test/render.test.js` — boots the **full game** (canvas/input/render loop) in
+  jsdom and asserts input, frames, merges, the HUD, and the game-over overlay
+  all run without throwing.
 
 ## Files
 
-| File                  | Purpose                                            |
-| --------------------- | -------------------------------------------------- |
-| `index.html`          | Structure / UI                                     |
-| `style.css`           | Cheesy hyper-casual styling + animations           |
-| `game.js`             | Game logic, juice, procedural audio, parody shop   |
-| `DESIGN.md`           | The psychology research + design rationale + log   |
-| `test/smoke.test.js`  | Headless smoke test (jsdom)                         |
+| File                  | Purpose                                                  |
+| --------------------- | -------------------------------------------------------- |
+| `index.html`          | Structure / HUD / game-over overlay                      |
+| `merge.css`           | Calm space theme + UI                                    |
+| `merge.js`            | Engine: testable physics core + render/input/audio layer |
+| `DESIGN.md`           | Research, the pivot rationale, and the iteration log     |
+| `test/`               | Headless core test + jsdom render test                   |
+| `archive/tap-clicker` | An earlier experiment (an honest-dopamine *clicker*); kept for reference — too shallow for the top-100 goal, which is why we pivoted to merge. |

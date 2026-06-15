@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MEGA TAP DELUXE™ — 100% Free, No Really</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- everything lives in #shake so we can screenshake the whole world -->
+  <div id="shake">
+    <!-- canvas particle layer sits behind the UI -->
+    <canvas id="fx"></canvas>
+
+    <header id="topbar">
+      <div class="stat">
+        <span class="stat-label">COINS</span>
+        <span class="stat-value" id="coins">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">STARDUST ✨</span>
+        <span class="stat-value" id="stardust">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">GEMS 💎</span>
+        <span class="stat-value" id="gems">∞</span>
+      </div>
+    </header>
+
+    <!-- cheesy parody "limited offer" banner that just gives you free stuff -->
+    <div id="offer" class="hidden" role="button" tabindex="0">
+      🎁 SPECIAL LIMITED OFFER: tap to claim <b>FREE</b> stuff! (always free, forever)
+    </div>
+
+    <main id="play">
+      <div id="combo-wrap">
+        <div id="combo-label">COMBO</div>
+        <div id="combo-value">x1.0</div>
+        <div id="combo-bar"><div id="combo-fill"></div></div>
+      </div>
+
+      <button id="tap" aria-label="Tap to earn coins">
+        <span id="tap-emoji">👆</span>
+        <span id="tap-text">TAP!</span>
+      </button>
+
+      <div id="frenzy-wrap">
+        <div id="frenzy-label">FRENZY METER</div>
+        <div id="frenzy-bar"><div id="frenzy-fill"></div></div>
+      </div>
+    </main>
+
+    <nav id="bottombar">
+      <button class="navbtn active" data-tab="play-tab">🎮 PLAY</button>
+      <button class="navbtn" data-tab="shop-tab">🛒 SHOP</button>
+      <button class="navbtn" id="muteBtn">🔊</button>
+    </nav>
+
+    <!-- the parody store -->
+    <section id="shop" class="hidden">
+      <h2>🛒 MEGA SHOP <small>(real upgrades cost coins; the jokes are free)</small></h2>
+      <button id="ascend">✨ ASCEND ✨<small>reset this run for permanent Stardust</small></button>
+      <div id="shop-list"></div>
+    </section>
+
+    <!-- the rigged-in-your-favor "loot box" overlay -->
+    <div id="jackpot" class="hidden">
+      <div id="jackpot-inner">
+        <div id="jackpot-title">🎰 MEGA JACKPOT 🎰</div>
+        <div id="reels">
+          <span class="reel">7</span><span class="reel">7</span><span class="reel">7</span>
+        </div>
+        <div id="jackpot-sub">guaranteed win — it's rigged in YOUR favor 😎</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- floating text + toast layer (outside shake so text stays readable) -->
+  <div id="floaters"></div>
+  <div id="toast" class="hidden"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>
