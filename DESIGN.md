@@ -1,13 +1,14 @@
 # DESIGN — The psychology of an *honest* dopamine generator
 
-This document is the research-and-evaluation half of the project. It answers:
-**what actually makes hyper-casual games feel good, which of those levers are
-honest, which are predatory — and what game we should build as a result.**
+This document is the **research and iteration log** half of the project. It
+answers: **what actually makes hyper-casual games feel good, which of those
+levers are honest, which are predatory** — and it records how the build evolved
+decision by decision.
 
-The product is a **persiflage** (loving parody) of heavily-advertised
-hyper-casual games: all of the cheesy dopamine, **none** of the dark patterns,
-monetization, or gambling. A game that delivers exactly what its honest ad
-promises, and *winks* at the genre's manipulations instead of using them.
+> The project's **goal and current concept** live in [GOAL.md](GOAL.md) — the
+> single source of truth for the "what and why." This file is the working
+> research behind that goal and the log of how we got here; where the two
+> touch, GOAL.md wins.
 
 ---
 
@@ -74,7 +75,11 @@ use lever 3 (variable-ratio gambling).
 
 ---
 
-## 3. The concept we chose
+## 3. The first concept (since pivoted — see §6)
+
+> Historical: this was the *original* direction. It was later pivoted to the
+> COSMIC MERGE game that is the project's current concept (see §6 and
+> [GOAL.md](GOAL.md)). Kept here as part of the decision log.
 
 **Working title: `MEGA TAP DELUXE™`** — a cheesy tap/clicker built entirely from
 the *honest* dopamine levers.
@@ -143,17 +148,17 @@ Filled in as we build, self-evaluate against the levers above, and improve.
 
 ## 6. THE PIVOT — from clicker to COSMIC MERGE (v0.4)
 
-**Owner's decision.** Goal raised to *top-100 App Store potential*: a genuinely
-good, return-to-it game; cheesy/honest take on the over-advertised genres; "too
-good to be true" — scratches the itch the ads promise, with no monetization or
-dark side. The tap-clicker (now in `archive/tap-clicker/`) is too shallow to
-clear that bar: its only real verb is "tap," and prestige deepens *progression*
-but not *play*. A clicker doesn't reach the top of the charts on merit.
+**Owner's decision.** Measured against the goal in [GOAL.md](GOAL.md) (a
+genuinely good, return-to-it game with top-100 potential as a solo build), the
+tap-clicker (now in `archive/tap-clicker/`) is too shallow: its only real verb
+is "tap," and prestige deepens *progression* but not *play*. A clicker doesn't
+reach the top of the charts on merit.
 
 So the core was pivoted to a **physics merge game** (the Suika lineage), themed
 in space (a recurring thread in our discussion).
 
-**Why merge wins for this goal (research-backed):**
+**Why merge wins for this goal (the research-backed detail behind GOAL.md's
+short version):**
 - **Accessible + deep** — "understand in seconds, master in hours." Real skill
   and planning, not autopilot. (This is the bar the user set: a game you *play*.)
 - **Loop, not arc** — procedurally endless; no hand-authored level treadmill.
@@ -190,11 +195,9 @@ game — exactly the "game with a joke, not a joke" correction.
   and simulates input — this is the layer that hid the drop-sound bug. All 28
   checks green.
 
-## 5. Open question the owner is still chasing
+## The open question
 
-Is the underlying *game* — tap → combo → frenzy → upgrade → ascend — actually
-fun enough on its own that someone returns tomorrow **without** the joke? The
-joke is differentiation and marketing; it is not the reason to keep playing.
-The next real work is validating (and, if needed, deepening) the core loop so it
-stands on its own. See README's "Test it" for the instrumentation that makes
-that measurable.
+The owner's standing open question — *is the core loop fun enough on its own
+that someone returns tomorrow without the joke?* — is tracked in
+[GOAL.md](GOAL.md). Validating (and, if needed, deepening) that loop is the next
+real work; the build log above is the record of progress against it.
