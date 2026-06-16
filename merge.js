@@ -727,6 +727,7 @@
 
   // ---- juice: particles, shake, floaters, shockwave rings, body pops -------
   let parts = [], shake = 0, floaters = [], rings = [], bangFlash = 0, comboFlash = 0;
+  let prevDanger = false; // for danger-onset audio cue
   const popById = new Map(); // body id -> pop start time (performance.now)
   function burst(x, y, n, color) {
     for (let i = 0; i < n; i++) {
@@ -960,6 +961,20 @@
         }
         if (elGoEarned) elGoEarned.textContent = '+' + (ev.earned || 0);
         if (elGoBalance) elGoBalance.textContent = meta.stardust;
+        // daily button: show replay hint if today's challenge was already played
+        if (elDailyBtn) {
+          if (meta.bestDailyDate === todayStr() && meta.bestDailyScore > 0) {
+            elDailyBtn.textContent = 'REPLAY DAILY · ' + meta.bestDailyScore.toLocaleString();
+          } else {
+            elDailyBtn.textContent = 'DAILY CHALLENGE';
+          }
+        }
+        // star chart button: highlight when new items are affordable
+        const elOpenChart = $('open-chart');
+        if (elOpenChart) {
+          const hasNew = META_ITEMS.some(i => !meta.unlocked[i.id] && meta.stardust >= i.cost);
+          elOpenChart.classList.toggle('has-unlockable', hasNew);
+        }
         saveMeta();
         elOver.classList.remove('hidden');
         blip(160, 0.4, 'sawtooth', 0.2);
@@ -1009,6 +1024,8 @@
     }
     // danger line — a subtle glowing threshold, only assertive when threatened
     const danger = world.overTimer > 0.05;
+    if (danger && !prevDanger) blip(55, 0.25, 'sine', 0.07); // low warning thud on onset
+    prevDanger = danger;
     ctx.save();
     ctx.strokeStyle = danger ? 'rgba(210,74,44,0.9)' : 'rgba(180,150,120,0.24)';
     ctx.lineWidth = danger ? 2.5 : 1.5; ctx.setLineDash([7, 9]);

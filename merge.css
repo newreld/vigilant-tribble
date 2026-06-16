@@ -204,6 +204,8 @@ body { display: flex; flex-direction: column; }
   color: var(--muted); transition: color .12s, border-color .12s;
 }
 #open-chart:hover { color: var(--paper); border-color: var(--teal); }
+#open-chart.has-unlockable { color: var(--teal); border-color: var(--teal); animation: pulse-teal 1.8s ease-in-out infinite; }
+@keyframes pulse-teal { 0%,100% { box-shadow: 0 0 0 0 rgba(75,179,156,0); } 50% { box-shadow: 0 0 0 4px rgba(75,179,156,0.22); } }
 
 /* star chart — same quiet, solid card language as game over */
 #starchart {
