@@ -164,6 +164,30 @@ ok(C.metaSetTheme('theme_aurora') === false, 'cannot wear an unowned cosmetic');
 C.meta.stardust = 250;
 ok(C.metaUnlock('theme_aurora') === true && C.meta.theme === 'theme_aurora', 'first cosmetic auto-wears on unlock');
 
+// --- 12. Tier Codex: first-time tier discovery --------------------------
+C.metaReset(); C.reset(16);
+ok(C.meta.codex.every(v => v === false), 'codex starts empty');
+ok(C.meta.codex.length === C.TIERS.length, 'codex has one slot per tier');
+// trigger a merge to tier 1
+C.world.bodies = [
+  { id: 980, tier: 0, x: 170, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+  { id: 981, tier: 0, x: 190, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+];
+C.world.events.length = 0;
+stepN(3);
+const cxEv = C.world.events.find(e => e.type === 'codex_unlock');
+ok(cxEv && cxEv.tier === 1, 'first merge to Comet emits a codex_unlock event');
+ok(C.meta.codex[1] === true, 'codex marks tier 1 (Comet) discovered');
+// second merge to same tier → no duplicate event
+C.world.events.length = 0;
+C.world.bodies = [
+  { id: 982, tier: 0, x: 170, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+  { id: 983, tier: 0, x: 190, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+];
+stepN(3);
+ok(!C.world.events.some(e => e.type === 'codex_unlock' && e.tier === 1),
+   'no codex_unlock event when tier is already discovered');
+
 // --- summary -------------------------------------------------------------
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

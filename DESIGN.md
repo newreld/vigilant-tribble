@@ -231,6 +231,17 @@ game — exactly the "game with a joke, not a joke" correction.
   Core test suite now 39 checks (economy, unlock/equip gating, modified-run
   purity, modifier effects); render test 13 (boots the chart UI + an unlock).
 
+- **v0.7 — Tier Codex + richer Star Chart.**
+  Added a **Tier Codex**: meta.codex[t] tracks which tiers have ever been created by
+  merge, persisted with the profile. First time each tier is discovered → `codex_unlock`
+  event → "FIRST COMET!" floater + ascending 3-note chime, then permanently lit in the
+  Star Chart's new Codex section. The Star Chart now has two more cosmetics (Eclipse Field,
+  Forge Field, both at 350 stardust) and a new modifier: **Guide Star** (600 stardust)
+  which draws a landing ring showing where the piece will rest — a real-skill aid rather
+  than a free win, hence opt-in modifier (flags run as modified, Classic stays pure).
+  Floaters now use Big Shoulders Display instead of Arial — consistent with the rest of the
+  UI voice. Core test suite: 44 checks; render smoke test: 13 checks.
+
 ## The open question
 
 The owner's standing open question — *is the core loop fun enough on its own

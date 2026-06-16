@@ -302,14 +302,20 @@
   //              "modified", so the Classic best stays a fair record of skill.
   //              It's play-to-unlock, never pay-to-win.
   const META_ITEMS = [
-    { id: 'theme_aurora', branch: 'cosmetic', name: 'Aurora Field', cost: 250,
+    { id: 'theme_aurora',  branch: 'cosmetic', name: 'Aurora Field',  cost: 250,
       desc: 'A cool aurora wash over the playfield.', tint: '#1f6f6a' },
-    { id: 'theme_ember',  branch: 'cosmetic', name: 'Ember Field',  cost: 250,
+    { id: 'theme_ember',   branch: 'cosmetic', name: 'Ember Field',   cost: 250,
       desc: 'A warm ember wash over the playfield.', tint: '#7a2f1c' },
-    { id: 'mod_primed',   branch: 'modifier', name: 'Primed Core',  cost: 400,
+    { id: 'theme_eclipse', branch: 'cosmetic', name: 'Eclipse Field', cost: 350,
+      desc: 'Indigo haze — the deep end of the spectrum.', tint: '#2d1b4e' },
+    { id: 'theme_forge',   branch: 'cosmetic', name: 'Forge Field',   cost: 350,
+      desc: 'Volcanic amber — heat bloom at the edge of a star.', tint: '#6a2e0e' },
+    { id: 'mod_primed',    branch: 'modifier', name: 'Primed Core',   cost: 400,
       desc: 'Start each run with the Supernova half-charged.' },
-    { id: 'mod_steady',   branch: 'modifier', name: 'Steady Hands', cost: 700,
+    { id: 'mod_steady',    branch: 'modifier', name: 'Steady Hands',  cost: 700,
       desc: 'A longer grace before the danger line ends a run.' },
+    { id: 'mod_guide',     branch: 'modifier', name: 'Guide Star',    cost: 600,
+      desc: 'Shows a landing ring — where your piece will come to rest.' },
   ];
   const META_BY_ID = {}; for (const it of META_ITEMS) META_BY_ID[it.id] = it;
 
@@ -319,8 +325,13 @@
     equipped: {},      // modifier id -> true
     theme: null,       // selected (unlocked) cosmetic field theme id, or null
     bestClassic: 0,    // fair, unmodified high score (for an honest leaderboard)
+    codex: new Array(TIERS.length).fill(false), // which tiers have been created by merge (ever)
   };
-  function metaReset() { meta.stardust = 0; meta.unlocked = {}; meta.equipped = {}; meta.theme = null; meta.bestClassic = 0; }
+  function metaReset() {
+    meta.stardust = 0; meta.unlocked = {}; meta.equipped = {};
+    meta.theme = null; meta.bestClassic = 0;
+    meta.codex = new Array(TIERS.length).fill(false);
+  }
   // Stardust from a run: scales with score but sub-linearly (sqrt), so a single
   // huge run can't trivialize the economy and grinding stays meaningful.
   function stardustForScore(score) { return Math.floor(Math.sqrt(Math.max(0, score)) * 1.5); }
@@ -467,14 +478,12 @@
         vx: (a.vx + c.vx) / 2, vy: (a.vy + c.vy) / 2, age: 0 };
       // remove the two, add the new
       world.bodies = world.bodies.filter(b => b !== a && b !== c);
-      if (nt >= MAX_TIER) {
-        // two black holes already exist? a NEW black hole is the max tier;
-        // merging TWO black holes triggers the BIG BANG.
-        world.bodies.push(nb);
-        world.events.push({ type: 'merge', x: nx, y: ny, tier: nt, id: nb.id });
-      } else {
-        world.bodies.push(nb);
-        world.events.push({ type: 'merge', x: nx, y: ny, tier: nt, id: nb.id });
+      world.bodies.push(nb);
+      world.events.push({ type: 'merge', x: nx, y: ny, tier: nt, id: nb.id });
+      // first time this tier has been created by merge → codex discovery
+      if (!meta.codex[nt]) {
+        meta.codex[nt] = true;
+        world.events.push({ type: 'codex_unlock', tier: nt, x: nx, y: ny });
       }
       merged++;
     }
@@ -624,6 +633,9 @@
       meta.equipped = m.equipped || {};
       meta.theme = m.theme || null;
       meta.bestClassic = m.bestClassic | 0;
+      if (Array.isArray(m.codex)) {
+        m.codex.forEach((v, i) => { if (v && i < TIERS.length) meta.codex[i] = true; });
+      }
     } catch (e) {}
   }
   const saveMeta = () => { try { localStorage.setItem('cosmic.meta', JSON.stringify(meta)); } catch (e) {} };
@@ -741,7 +753,7 @@
   $('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false'); if (!muted) blip(660, 0.1); });
 
   // ---- Star Chart: spend stardust earned by playing -----------------------
-  const scBalance = $('sc-balance'), scCosmetic = $('sc-cosmetic'), scModifier = $('sc-modifier');
+  const scBalance = $('sc-balance'), scCosmetic = $('sc-cosmetic'), scModifier = $('sc-modifier'), scCodex = $('sc-codex');
   function chartItemEl(item) {
     const owned = !!meta.unlocked[item.id];
     const el = document.createElement('div');
@@ -770,6 +782,23 @@
     el.append(main, btn);
     return el;
   }
+  function renderCodex() {
+    if (!scCodex) return;
+    scCodex.innerHTML = '';
+    for (let t = 0; t < TIERS.length; t++) {
+      const found = t === 0 || !!meta.codex[t]; // tier 0 (Asteroid) always found — you drop them
+      const el = document.createElement('div');
+      el.className = 'codex-tier' + (found ? ' found' : '');
+      const dot = document.createElement('span');
+      dot.className = 'codex-dot';
+      if (found) dot.style.background = TIER_ART[t].accent;
+      const lbl = document.createElement('span');
+      lbl.className = 'codex-label';
+      lbl.textContent = TIERS[t].name;
+      el.append(dot, lbl);
+      scCodex.append(el);
+    }
+  }
   function renderChart() {
     if (!elChart) return;
     scBalance.textContent = meta.stardust;
@@ -777,6 +806,7 @@
     for (const item of META_ITEMS) {
       (item.branch === 'cosmetic' ? scCosmetic : scModifier).append(chartItemEl(item));
     }
+    renderCodex();
   }
   const openChart = () => { renderChart(); elChart.classList.remove('hidden'); };
   const closeChart = () => elChart.classList.add('hidden');
@@ -810,6 +840,9 @@
         for (let i = 0; i < 18; i++) burst(FIELD_W * Math.random(), FIELD_H * (0.2 + 0.7 * Math.random()), 22, '#f0883e');
         if (ev.cleared > 0) floatScore(FIELD_W / 2, FIELD_H / 2, 'SUPERNOVA  +' + ev.cleared * 30, '#ffd9a0');
         [392, 523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.18, 'triangle', 0.16), i * 70));
+      } else if (ev.type === 'codex_unlock') {
+        floatScore(ev.x, ev.y - 28, 'FIRST  ' + TIERS[ev.tier].name.toUpperCase() + '!', '#4bb39c');
+        [392, 523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.15, 'triangle', 0.18), i * 80));
       } else if (ev.type === 'gameover') {
         elFinal.textContent = world.score;
         const isNewBest = world.score > storedBest && world.score > 0;
@@ -887,6 +920,19 @@
     }
     ctx.globalAlpha = 1;
     if (world.current && !world.over) {
+      // landing ring (mod_guide modifier) — approximate where the piece will rest
+      if (meta.equipped['mod_guide']) {
+        const cr = TIERS[world.current.tier].r, cx = world.current.x;
+        let landY = FIELD_H - cr;
+        for (const b of world.bodies) {
+          const br = TIERS[b.tier].r;
+          if (Math.abs(b.x - cx) < cr + br) { const top = b.y - br - cr; if (top < landY) landY = top; }
+        }
+        ctx.globalAlpha = 0.4; ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+        ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
+        ctx.beginPath(); ctx.arc(cx, landY, cr, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]); ctx.globalAlpha = 1;
+      }
       drawBody(world.current.x, SPAWN_Y, world.current.tier, true);
       ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4, 6]);
       ctx.beginPath(); ctx.moveTo(world.current.x, SPAWN_Y); ctx.lineTo(world.current.x, FIELD_H); ctx.stroke();
@@ -907,7 +953,8 @@
       const f = floaters[i]; f.y -= 0.6; f.life -= 0.02;
       if (f.life <= 0) { floaters.splice(i, 1); continue; }
       ctx.globalAlpha = Math.max(0, f.life); ctx.fillStyle = f.color || '#fff';
-      ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center';
+      ctx.font = '700 22px "Big Shoulders Display", "Arial Narrow", sans-serif';
+      ctx.textAlign = 'center';
       ctx.fillText(f.text, f.x, f.y);
     }
     ctx.globalAlpha = 1;
