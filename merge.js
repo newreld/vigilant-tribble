@@ -40,7 +40,7 @@
   const GLOW_MAX = 1.85;
   const TIER_ART = [
     // a = lit color, b = shadow color, glow = halo color, gs = glow strength
-    { type: 'rock',   a: [0.66, 0.58, 0.49], b: [0.16, 0.13, 0.11], glow: [0.0, 0.0, 0.0],  gs: 0.0,  accent: '#c4a888' },
+    { type: 'rock',   a: [0.64, 0.46, 0.32], b: [0.15, 0.10, 0.07], glow: [0.0, 0.0, 0.0],  gs: 0.0,  accent: '#b8763f' },
     { type: 'ice',    a: [0.85, 0.97, 1.00], b: [0.13, 0.46, 0.70], glow: [0.45, 0.85, 1.0], gs: 0.75, accent: '#8fe3ff' },
     { type: 'moon',   a: [0.95, 0.95, 0.99], b: [0.34, 0.35, 0.44], glow: [0.55, 0.62, 0.85], gs: 0.22, accent: '#dfe2f0' },
     { type: 'planet', a: [0.26, 0.56, 1.00], b: [0.02, 0.10, 0.30], glow: [0.30, 0.62, 1.0], gs: 0.40, accent: '#5aa6ff' },
@@ -435,7 +435,7 @@
   function buildFieldGfx() {
     try {
       const g = ctx.createLinearGradient(0, 0, 0, FIELD_H);
-      g.addColorStop(0, 'rgba(22,20,52,0.5)'); g.addColorStop(0.55, 'rgba(11,9,30,0.5)'); g.addColorStop(1, 'rgba(4,3,14,0.62)');
+      g.addColorStop(0, 'rgba(38,26,44,0.5)'); g.addColorStop(0.55, 'rgba(20,13,24,0.5)'); g.addColorStop(1, 'rgba(8,5,12,0.62)');
       fieldGrad = g;
       const v = ctx.createRadialGradient(FIELD_W / 2, FIELD_H * 0.42, FIELD_W * 0.18, FIELD_W / 2, FIELD_H * 0.5, FIELD_W * 0.82);
       v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.42)');
@@ -593,9 +593,9 @@
     // danger line — a subtle glowing threshold, only assertive when threatened
     const danger = world.overTimer > 0.05;
     ctx.save();
-    ctx.strokeStyle = danger ? 'rgba(255,70,110,0.85)' : 'rgba(150,170,255,0.28)';
+    ctx.strokeStyle = danger ? 'rgba(210,74,44,0.9)' : 'rgba(180,150,120,0.24)';
     ctx.lineWidth = danger ? 2.5 : 1.5; ctx.setLineDash([7, 9]);
-    if (danger) { ctx.shadowColor = 'rgba(255,70,110,0.9)'; ctx.shadowBlur = 12; }
+    if (danger) { ctx.shadowColor = 'rgba(210,74,44,0.9)'; ctx.shadowBlur = 12; }
     ctx.beginPath(); ctx.moveTo(0, DANGER_Y); ctx.lineTo(FIELD_W, DANGER_Y); ctx.stroke();
     ctx.restore();
     ctx.setLineDash([]);
