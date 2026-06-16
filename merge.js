@@ -171,20 +171,16 @@
         col = c.map(v => _cl(v * (0.82 + 0.18 * (1 - d * 0.5)) + grain * 0.25, 0, 1));
 
       } else if (tier === 7) {
-        // GALAXY — teal spiral arms, warm cream core, dark inter-arm voids
+        // GALAXY — round disc (in-family silhouette), warm core, smooth teal
+        // logarithmic spiral arms. Smooth modulation (no hard pinwheel edges).
         const ang = Math.atan2(ny, nx);
-        const onArm = ((ang + d * 4.5) % Math.PI) / Math.PI < 0.40;
-        const core = _cl((0.38 - d) * 4, 0, 1);
-        let c;
-        if (core > 0.1) {
-          c = _mix([0.72, 0.58, 0.38], [0.96, 0.88, 0.72], core);
-        } else if (onArm) {
-          c = _mix([0.16, 0.56, 0.52], [0.28, 0.72, 0.66], 1 - d);
-          c = _mix(c, [0.80, 0.56, 0.22], d * 0.25);
-        } else {
-          c = _mix([0.06, 0.14, 0.18], [0.12, 0.26, 0.28], 1 - d);
-        }
-        col = c.map(v => _cl(v + grain * 0.4, 0, 1));
+        const spiral = Math.cos(2 * ang - 5.5 * Math.log(d + 0.16)); // 2-arm log spiral
+        const arm = Math.pow(_cl(spiral * 0.5 + 0.5, 0, 1), 1.7);    // 0..1, tightened
+        const core = _cl((0.30 - d) * 4.0, 0, 1);
+        let c = _mix([0.08, 0.20, 0.22], [0.15, 0.40, 0.38], 1 - d); // disc: rim→mid teal
+        c = _mix(c, [0.32, 0.76, 0.66], arm * (0.80 - 0.40 * d));     // brighter teal arms
+        c = _mix(c, [0.98, 0.90, 0.74], core);                       // warm cream core
+        col = c.map(v => _cl(v * limb + grain * 0.4, 0, 1));
 
       } else if (tier === 8) {
         // BLACK HOLE — near-black, hard marigold photon ring, faint lensed arc
@@ -476,7 +472,7 @@
   // Each tier is rasterized to an offscreen canvas via the shared shader, then
   // blitted. Falls back to a flat disc if 2D/ImageData is unavailable (e.g. the
   // headless jsdom test), so the game still boots everywhere.
-  const SUP = 2; // supersample for crisp edges
+  const SUP = 3; // supersample for crisp edges (sprites blit near 1:1 with device px)
   const sprites = [];
   function bakeSprite(tier) {
     try {
@@ -557,6 +553,7 @@
     offX = (availW - FIELD_W * scale) / 2;
     offY = (availH - FIELD_H * scale) / 2;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   }
   window.addEventListener('resize', resize);
 
