@@ -33,19 +33,27 @@ const VIEWS = [
       const ctx = await browser.newContext({ viewport: { width: v.width, height: v.height }, deviceScaleFactor: 2 });
       const page = await ctx.newPage();
       await page.goto(`http://localhost:${PORT}/index.html`, { waitUntil: 'load', timeout: 30000 });
-      await page.waitForTimeout(2000); // fonts + boot + sprite bake
+      await page.waitForTimeout(3000); // fonts + boot + sprite bake (extra buffer)
       // play: drop a series of pieces across the field so the board isn't empty
       try {
+        // wait for the game canvas to be present and interactive
+        await page.waitForSelector('#game', { state: 'visible', timeout: 5000 });
         const box = await (await page.$('#game')).boundingBox();
-        for (let i = 0; i < 16; i++) {
+        if (!box || box.width === 0) throw new Error('game canvas has no bounding box');
+        console.log(`  ${v.name}: game canvas at x=${box.x.toFixed(0)} y=${box.y.toFixed(0)} w=${box.width.toFixed(0)} h=${box.height.toFixed(0)}`);
+        for (let i = 0; i < 18; i++) {
           const x = box.x + box.width * (0.18 + 0.64 * ((i * 0.37) % 1));
-          const y = box.y + 36;
+          const y = box.y + 40;
           await page.mouse.move(x, y);
           await page.mouse.down(); await page.mouse.up();
-          await page.waitForTimeout(430);
+          await page.waitForTimeout(480);
         }
+        // verify drops landed (score or bodies)
+        const score = await page.evaluate(() => window.__cosmic && window.__cosmic.world.score);
+        const bodies = await page.evaluate(() => window.__cosmic && window.__cosmic.world.bodies.length);
+        console.log(`  ${v.name}: score=${score} bodies=${bodies}`);
       } catch (e) { console.log('  play step skipped: ' + e.message); }
-      await page.waitForTimeout(1800);
+      await page.waitForTimeout(2000);
       await page.screenshot({ path: `screenshots/${v.name}.png` });
       console.log('  wrote screenshots/' + v.name + '.png');
       await ctx.close();
@@ -55,22 +63,34 @@ const VIEWS = [
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
       const page = await ctx.newPage();
       await page.goto(`http://localhost:${PORT}/index.html`, { waitUntil: 'load', timeout: 30000 });
-      await page.waitForTimeout(2000);
-      // populate a profile: some stardust, one cosmetic owned (auto-worn)
+      await page.waitForTimeout(3000);
+      // verify the game booted
+      const booted = await page.evaluate(() => !!window.__cosmic);
+      if (!booted) throw new Error('window.__cosmic not available after boot');
+      // populate a profile + trigger game over (injecting all event fields v0.8 expects)
       await page.evaluate(() => {
         const C = window.__cosmic;
         C.meta.stardust = 1850;
         C.metaUnlock('theme_aurora'); // owned + auto-worn; rest stay buyable
         C.world.score = 12345;
-        C.world.events.push({ type: 'gameover', earned: 167, modified: false });
+        C.world.drops = 34;
+        C.world.peakCombo = 5;
+        C.world.topTier = 6; // Star
+        C.world.events.push({
+          type: 'gameover', earned: 167, modified: false,
+          drops: 34, peakCombo: 5, topTier: 6,
+        });
         C.world.over = true;
       });
-      await page.waitForTimeout(400);
+      await page.waitForTimeout(500);
+      // confirm game-over overlay appeared
+      const goVisible = await page.evaluate(() => !document.getElementById('gameover').classList.contains('hidden'));
+      if (!goVisible) throw new Error('game-over overlay did not appear');
       await page.screenshot({ path: 'screenshots/gameover.png' });
       console.log('  wrote screenshots/gameover.png');
       // open the Star Chart from the game-over card
       await page.click('#open-chart');
-      await page.waitForTimeout(400);
+      await page.waitForTimeout(500);
       await page.screenshot({ path: 'screenshots/starchart.png' });
       console.log('  wrote screenshots/starchart.png');
       await ctx.close();
