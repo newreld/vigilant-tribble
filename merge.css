@@ -76,10 +76,14 @@ body { display: flex; flex-direction: column; }
 
 #muteBtn {
   background: none; color: var(--muted); border: 1px solid var(--line);
-  border-radius: 8px; width: 36px; height: 36px; font-size: 15px; cursor: pointer;
+  border-radius: 8px; width: 36px; height: 36px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
   transition: color .12s, border-color .12s;
 }
 #muteBtn:hover { color: var(--paper); border-color: var(--marigold); }
+#muteBtn .slash { display: none; }
+#muteBtn[aria-pressed="true"] .slash { display: block; }
+#muteBtn[aria-pressed="true"] .waves { opacity: 0.25; }
 
 #combo {
   position: relative; z-index: 2; text-align: center; height: 20px;
@@ -92,11 +96,6 @@ body { display: flex; flex-direction: column; }
   min-height: 0; padding: 0 8px;
 }
 #game { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
-
-#tagline {
-  position: relative; z-index: 2; text-align: center;
-  font-size: 9px; letter-spacing: 3px; color: var(--muted); padding: 8px;
-}
 
 /* game over — solid, quiet, on-brand. No blur, no glow, no big soft shadow. */
 #gameover {

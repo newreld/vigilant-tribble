@@ -37,8 +37,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Stage the static site
         run: |
-          mkdir _site
+          mkdir -p _site/docs
           cp index.html merge.css merge.js _site/
+          cp docs/moodboard.html docs/bodies.png docs/DESIGN-TELLS.md _site/docs/
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
