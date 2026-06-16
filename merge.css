@@ -90,12 +90,14 @@ body {
 .next-name { font-size: 7px; letter-spacing: 1px; color: var(--muted); font-family: var(--mono); }
 
 #muteBtn {
-  background: none; color: var(--muted); border: 1px solid var(--line);
+  background: rgba(241,230,208,.06); color: var(--muted); border: 1.5px solid rgba(241,230,208,.4);
   border-radius: 8px; width: clamp(30px, 8vw, 36px); height: clamp(30px, 8vw, 36px); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: color .12s, border-color .12s; flex: none;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.22);
+  transition: color .12s, border-color .12s, background .12s; flex: none;
 }
-#muteBtn:hover { color: var(--paper); border-color: var(--marigold); }
+#muteBtn:hover { color: var(--paper); border-color: var(--marigold); background: rgba(241,230,208,.12); }
+#muteBtn:active { box-shadow: inset 0 1px 0 rgba(0,0,0,.22); transform: translateY(1px); }
 #muteBtn .slash { display: none; }
 #muteBtn[aria-pressed="true"] .slash { display: block; }
 #muteBtn[aria-pressed="true"] .waves { opacity: 0.25; }
@@ -104,8 +106,9 @@ body {
    Subtle while charging; turns marigold + becomes tappable when ready. */
 #nova {
   position: relative; z-index: 2; display: flex; align-items: center; justify-content: center;
-  margin: 6px 16px 0; height: 16px; padding: 0;
-  border: 1px solid var(--line); border-radius: 8px; background: none;
+  margin: 6px 16px 0; height: 22px; padding: 0;
+  border: 1.5px solid rgba(241,230,208,.4); border-radius: 8px; background: rgba(241,230,208,.06);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.22);
   overflow: hidden; cursor: default; font-family: var(--mono);
   -webkit-appearance: none; appearance: none;
 }

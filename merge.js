@@ -252,9 +252,11 @@
   // run is never unfair); the ramp matters only once a run runs long.
   const DROP_POOLS = [
     { at: 0,   pool: [0, 0, 0, 0, 1, 1, 1, 2, 2, 3] },
-    { at: 30,  pool: [0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4] },
-    { at: 70,  pool: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4] },
-    { at: 120, pool: [0, 1, 1, 2, 2, 3, 3, 4, 4, 5] },
+    { at: 15,  pool: [0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4] },
+    { at: 40,  pool: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4] },
+    { at: 70,  pool: [0, 1, 1, 2, 2, 3, 3, 4, 4, 5] },
+    { at: 110, pool: [0, 1, 2, 2, 3, 3, 4, 4, 5, 5] },
+    { at: 160, pool: [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6] },
   ];
   function dropPool() {
     let pool = DROP_POOLS[0].pool;
@@ -1113,17 +1115,27 @@
       ctx.fillStyle = META_BY_ID[meta.theme].tint; ctx.fillRect(0, 0, FIELD_W, FIELD_H);
       ctx.restore();
     }
-    // danger line — a subtle glowing threshold, only assertive when threatened
+    // danger threshold — a soft tinted band straddling the line, not a stroke;
+    // reads as part of the field lighting rather than a drawn-on dashed rule,
+    // and warms from dusty neutral to red as the grace timer ticks.
     const danger = world.overTimer > 0.05;
     if (danger && !prevDanger) blip(55, 0.25, 'sine', 0.07); // low warning thud on onset
     prevDanger = danger;
-    ctx.save();
-    ctx.strokeStyle = danger ? 'rgba(210,74,44,0.9)' : 'rgba(180,150,120,0.24)';
-    ctx.lineWidth = danger ? 2.5 : 1.5; ctx.setLineDash([7, 9]);
-    if (danger) { ctx.shadowColor = 'rgba(210,74,44,0.9)'; ctx.shadowBlur = 12; }
-    ctx.beginPath(); ctx.moveTo(0, DANGER_Y); ctx.lineTo(FIELD_W, DANGER_Y); ctx.stroke();
-    ctx.restore();
-    ctx.setLineDash([]);
+    const bandTop = DANGER_Y - 20, bandBot = DANGER_Y + 9;
+    try {
+      const bandGrad = ctx.createLinearGradient(0, bandTop, 0, bandBot);
+      if (danger) {
+        bandGrad.addColorStop(0, 'rgba(210,74,44,0)');
+        bandGrad.addColorStop(0.6, 'rgba(210,74,44,0.4)');
+        bandGrad.addColorStop(1, 'rgba(210,74,44,0)');
+      } else {
+        bandGrad.addColorStop(0, 'rgba(180,150,120,0)');
+        bandGrad.addColorStop(0.6, 'rgba(180,150,120,0.18)');
+        bandGrad.addColorStop(1, 'rgba(180,150,120,0)');
+      }
+      ctx.fillStyle = bandGrad;
+      ctx.fillRect(0, bandTop, FIELD_W, bandBot - bandTop);
+    } catch (_) {}
     // danger vignette — red edge bleed builds up as the grace timer ticks
     if (danger) {
       try {
@@ -1189,9 +1201,12 @@
         ctx.setLineDash([]); ctx.globalAlpha = 1;
       }
       drawBody(world.current.x, ghostY, world.current.tier, true);
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4, 6]);
-      ctx.beginPath(); ctx.moveTo(world.current.x, ghostY); ctx.lineTo(world.current.x, FIELD_H); ctx.stroke();
-      ctx.setLineDash([]);
+      // aim guide — drawn as actual dots (not a dashed stroke, which reads
+      // as a thin rule) so the drop line feels lighter, more like a sight.
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      for (let yy = ghostY + 5; yy < FIELD_H; yy += 9) {
+        ctx.beginPath(); ctx.arc(world.current.x, yy, 1.1, 0, Math.PI * 2); ctx.fill();
+      }
     }
 
     // first-drop hint — vanishes the moment the player drops their first piece

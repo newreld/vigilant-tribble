@@ -116,10 +116,15 @@ C.world.drops = 0;
 let earlyMax = 0;
 for (let i = 0; i < 200; i++) earlyMax = Math.max(earlyMax, C.pickTier());
 ok(earlyMax <= 3, 'a fresh run (drops=0) still only ever sees tiers 0-3');
-C.world.drops = 150;
-let lateMax = 0;
-for (let i = 0; i < 400; i++) lateMax = Math.max(lateMax, C.pickTier());
-ok(lateMax > earlyMax, 'a long run (many drops) widens the spawn pool to bigger tiers');
+C.world.drops = 100;
+let midMax = 0;
+for (let i = 0; i < 400; i++) midMax = Math.max(midMax, C.pickTier());
+ok(midMax > earlyMax, 'a run 100 drops in already widens the spawn pool to bigger tiers');
+C.world.drops = 200;
+let lateMax = 0, lateMin = 99;
+for (let i = 0; i < 600; i++) { const t = C.pickTier(); lateMax = Math.max(lateMax, t); lateMin = Math.min(lateMin, t); }
+ok(lateMax > midMax, 'a very long run (200+ drops) keeps escalating past the mid-run pool');
+ok(lateMin >= 1, 'a very long run stops handing out the trivial tier-0 filler entirely');
 
 // --- 9c. edge-snap aim assist: aiming near a wall resolves flush ----------
 // Without this, a big piece's "flush against the wall" zone is a tiny sliver
