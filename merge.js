@@ -696,7 +696,7 @@
   }
 
   // ---- juice: particles, shake, floaters, shockwave rings, body pops -------
-  let parts = [], shake = 0, floaters = [], rings = [];
+  let parts = [], shake = 0, floaters = [], rings = [], bangFlash = 0;
   const popById = new Map(); // body id -> pop start time (performance.now)
   function burst(x, y, n, color) {
     for (let i = 0; i < n; i++) {
@@ -861,9 +861,10 @@
         mergeSound(ev.tier, world.combo);
         if (world.combo > 1) floatScore(ev.x, ev.y - 22, 'COMBO x' + world.combo, '#ffe066');
       } else if (ev.type === 'bigbang') {
-        for (let i = 0; i < 10; i++) setTimeout(() => burst(FIELD_W * Math.random(), FIELD_H * Math.random(), 40, '#fff'), i * 40);
-        shake = 26; floatScore(FIELD_W / 2, FIELD_H / 2, 'BIG BANG  +' + ev.bonus, '#ff8ad0');
-        [262, 330, 392, 523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.2, 'triangle', 0.2), i * 90));
+        bangFlash = 1; shake = 26;
+        for (let i = 0; i < 14; i++) setTimeout(() => burst(FIELD_W * Math.random(), FIELD_H * Math.random(), 48, '#fff'), i * 30);
+        setTimeout(() => floatScore(FIELD_W / 2, FIELD_H / 2, 'BIG BANG  +' + ev.bonus, '#ff8ad0'), 300);
+        [196, 262, 330, 392, 523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.22, 'triangle', 0.22), i * 80));
       } else if (ev.type === 'supernova') {
         // a shockwave from the top sweeping the field; debris flares out
         shake = Math.min(shake + 16, 26);
@@ -1010,6 +1011,14 @@
       ctx.fillText(f.text, f.x, f.y);
     }
     ctx.globalAlpha = 1;
+
+    // BIG BANG white flash — a blinding wash that fades to reveal the cleared field
+    if (bangFlash > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${(bangFlash * 0.9).toFixed(3)})`;
+      ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      bangFlash = Math.max(0, bangFlash - 0.045);
+    }
+
     ctx.restore();
 
     shake *= 0.85; if (shake < 0.3) shake = 0;
