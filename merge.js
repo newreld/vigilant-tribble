@@ -272,7 +272,7 @@
 
   // ---- world --------------------------------------------------------------
   const world = {
-    bodies: [], current: null, next: null,
+    bodies: [], current: null, next: null, next2: null,
     score: 0, best: 0, over: false,
     overTimer: 0, dropTimer: 0, combo: 0, comboTimer: 0,
     charge: 0, superReady: false, // Supernova: earned by combos, no meta-currency
@@ -334,6 +334,8 @@
       desc: 'A longer grace before the danger line ends a run.' },
     { id: 'mod_guide',     branch: 'modifier', name: 'Guide Star',    cost: 600,
       desc: 'Shows a landing ring — where your piece will come to rest.' },
+    { id: 'mod_doublenext', branch: 'modifier', name: 'Deep Scan',    cost: 900,
+      desc: 'See two pieces ahead instead of one — plan further, chain deeper.' },
   ];
   const META_BY_ID = {}; for (const it of META_ITEMS) META_BY_ID[it.id] = it;
 
@@ -400,12 +402,14 @@
     }
     if (seed != null) world.rng = mulberry32(seed >>> 0);
     world.next = pickTier();
+    world.next2 = pickTier();
     spawnCurrent();
   }
 
   function spawnCurrent() {
     world.current = { tier: world.next, x: FIELD_W / 2 };
-    world.next = pickTier();
+    world.next = world.next2;
+    world.next2 = pickTier();
   }
 
   function moveCurrent(x) {
@@ -659,14 +663,28 @@
 
   // next-piece preview (mini sprite in the HUD)
   const nctx = (elNext && elNext.getContext) ? elNext.getContext('2d') : null;
-  let nextShown = -1, novaShown = null;
+  let nextShown = -1, nextShown2 = -1, novaShown = null;
   function drawNext() {
     if (!nctx) return;
     const w = elNext.width, h = elNext.height;
     nctx.clearRect(0, 0, w, h);
-    const sp = sprite(world.next);
-    if (sp && sp.cv) { const sz = Math.min(w, h) * 0.96; nctx.drawImage(sp.cv, (w - sz) / 2, (h - sz) / 2, sz, sz); }
-    if (elNextName) elNextName.textContent = TIERS[world.next].name;
+    const doubleNext = !world.daily && !!meta.equipped['mod_doublenext'] && world.next2 !== null;
+    if (doubleNext) {
+      // left: current next at ~60%, right: next2 at ~38% (dimmer, further ahead)
+      const sp1 = sprite(world.next), sp2 = sprite(world.next2);
+      const sz1 = Math.min(w, h) * 0.62, sz2 = Math.min(w, h) * 0.38;
+      if (sp1 && sp1.cv) nctx.drawImage(sp1.cv, 0, (h - sz1) / 2, sz1, sz1);
+      if (sp2 && sp2.cv) {
+        nctx.globalAlpha = 0.55;
+        nctx.drawImage(sp2.cv, w - sz2 - 1, (h - sz2) / 2 + 4, sz2, sz2);
+        nctx.globalAlpha = 1;
+      }
+      if (elNextName) elNextName.textContent = TIERS[world.next].name + ' · ' + TIERS[world.next2].name;
+    } else {
+      const sp = sprite(world.next);
+      if (sp && sp.cv) { const sz = Math.min(w, h) * 0.96; nctx.drawImage(sp.cv, (w - sz) / 2, (h - sz) / 2, sz, sz); }
+      if (elNextName) elNextName.textContent = TIERS[world.next].name;
+    }
   }
 
   let muted = false;
@@ -1129,7 +1147,7 @@
     elScore.textContent = world.score;
     elBest.textContent = world.best;
     if (elDailyBadge) elDailyBadge.classList.toggle('hidden', !world.daily);
-    if (world.next !== nextShown) { drawNext(); nextShown = world.next; }
+    if (world.next !== nextShown || world.next2 !== nextShown2) { drawNext(); nextShown = world.next; nextShown2 = world.next2; }
     elCombo.textContent = world.combo > 1 ? 'COMBO ×' + world.combo : '';
     if (elNova) {
       elNovaFill.style.width = Math.min(100, world.charge / CHARGE_MAX * 100) + '%';

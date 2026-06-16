@@ -15,6 +15,7 @@ C.reset(12345);
 ok(C.world.bodies.length === 0, 'reset clears the field');
 ok(C.world.current && typeof C.world.current.tier === 'number', 'a current piece is spawned');
 ok(typeof C.world.next === 'number', 'a next piece is queued');
+ok(typeof C.world.next2 === 'number', 'a next2 look-ahead piece is queued');
 ok(C.world.score === 0 && C.world.over === false, 'reset zeroes score and clears game-over');
 
 // --- 2. dropping adds a falling body -------------------------------------
