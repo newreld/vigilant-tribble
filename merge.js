@@ -39,16 +39,15 @@
   // ========================================================================
   const GLOW_MAX = 1.85;
   const TIER_ART = [
-    // a = lit color, b = shadow color, glow = halo color, gs = glow strength
-    { type: 'rock',   a: [0.64, 0.46, 0.32], b: [0.15, 0.10, 0.07], glow: [0.0, 0.0, 0.0],  gs: 0.0,  accent: '#b8763f' },
-    { type: 'ice',    a: [0.85, 0.97, 1.00], b: [0.13, 0.46, 0.70], glow: [0.45, 0.85, 1.0], gs: 0.75, accent: '#8fe3ff' },
-    { type: 'moon',   a: [0.95, 0.95, 0.99], b: [0.34, 0.35, 0.44], glow: [0.55, 0.62, 0.85], gs: 0.22, accent: '#dfe2f0' },
-    { type: 'planet', a: [0.26, 0.56, 1.00], b: [0.02, 0.10, 0.30], glow: [0.30, 0.62, 1.0], gs: 0.40, accent: '#5aa6ff' },
-    { type: 'ringed', a: [0.96, 0.80, 0.52], b: [0.42, 0.26, 0.10], glow: [0.95, 0.78, 0.45], gs: 0.20, accent: '#f0c878' },
-    { type: 'star',   a: [1.00, 0.98, 0.78], b: [1.00, 0.74, 0.20], glow: [1.0, 0.84, 0.32], gs: 1.0,  accent: '#ffe066' },
-    { type: 'star',   a: [1.00, 0.93, 0.72], b: [1.00, 0.50, 0.14], glow: [1.0, 0.52, 0.18], gs: 1.15, accent: '#ff9a3c' },
-    { type: 'galaxy', a: [0.92, 0.82, 1.00], b: [0.30, 0.16, 0.55], glow: [0.62, 0.40, 1.0], gs: 0.9,  accent: '#c79bff' },
-    { type: 'hole',   a: [0.0, 0.0, 0.0],    b: [0.0, 0.0, 0.0],    glow: [1.0, 0.55, 0.22], gs: 0.85, accent: '#ffb866' },
+    { accent: '#a06428' }, // 0 asteroid  — sandy ochre
+    { accent: '#88c4bc' }, // 1 comet     — ice teal
+    { accent: '#7c7870' }, // 2 moon      — warm ash
+    { accent: '#c03c20' }, // 3 planet    — brick/rust
+    { accent: '#e08830' }, // 4 gas giant — marigold
+    { accent: '#f0c840' }, // 5 star      — cream-yellow
+    { accent: '#c82c10' }, // 6 red giant — deep brick
+    { accent: '#3a9484' }, // 7 galaxy    — teal
+    { accent: '#f0883e' }, // 8 black hole — marigold ring
   ];
 
   const _cl = (x, a, b) => (x < a ? a : x > b ? b : x);
@@ -63,96 +62,161 @@
   }
   function _fbm(x, y) { let s = 0, a = 0.5, f = 1; for (let i = 0; i < 4; i++) { s += a * _vn(x * f, y * f); f *= 2; a *= 0.5; } return s; }
 
-  // light direction (upper-left key light)
-  const LX = -0.42, LY = -0.52, LZ = 0.74;
-
-  function _ringSample(nx, ny) {
-    const tilt = 0.40, RIN = 1.24, ROUT = 1.96;
+  // Poster-style Saturn rings: three hard-edged bands (teal / cream / ochre) with a gap
+  function _posterRing(nx, ny) {
+    const tilt = 0.34;
     const rho = Math.sqrt(nx * nx + (ny / tilt) * (ny / tilt));
-    if (rho < RIN || rho > ROUT) return null;
-    let a = 0.9 * (0.6 + 0.4 * _vn(rho * 60, 7));        // banding
-    if (Math.abs(rho - 1.60) < 0.07) a *= 0.18;          // Cassini-style gap
-    a *= _ss(ROUT, ROUT - 0.12, rho);                    // soft outer edge
-    const col = _mix([0.55, 0.40, 0.22], [0.98, 0.86, 0.62], _vn(rho * 30, 3));
-    return { col, a: _cl(a, 0, 1) };
+    if (rho < 1.13 || rho > 1.78) return null;
+    if (rho > 1.34 && rho < 1.46) return null; // gap between inner and mid band
+    let c, a;
+    if (rho <= 1.34) {
+      c = _mix([0.24, 0.62, 0.58], [0.16, 0.48, 0.44], (rho - 1.13) / 0.21);
+      a = 0.88;
+    } else if (rho <= 1.62) {
+      c = _mix([0.90, 0.82, 0.62], [0.76, 0.66, 0.44], (rho - 1.46) / 0.16);
+      a = 0.82;
+    } else {
+      const t = (rho - 1.62) / 0.16;
+      c = _mix([0.66, 0.52, 0.26], [0.50, 0.36, 0.14], t);
+      a = 0.60 * (1 - t);
+    }
+    return { col: c, a: _cl(a, 0, 1) };
   }
 
-  // returns [r,g,b,a] each 0..255
+  // returns [r,g,b,a] each 0..255 — mid-century NASA-poster art language:
+  // flat fills, hard-edged bands, stippled craters, no sphere normals, subtle grain.
   function shadeBody(tier, nx, ny) {
-    const art = TIER_ART[tier];
     const d = Math.hypot(nx, ny);
+    // paper-grain: fine hash noise added to all body fills
+    const grain = (_hash(nx * 53.1 + tier * 17.3, ny * 61.7 + tier * 11.9) - 0.5) * 0.055;
     let col = [0, 0, 0], al = 0;
 
     if (d <= 1.0) {
-      const nz = Math.sqrt(Math.max(0, 1 - d * d));
-      const diff = _cl(nx * LX + ny * LY + nz * LZ, 0, 1);
-      const rim = _ss(0.55, 1.0, d) * (0.35 + 0.65 * (1 - diff));
-      const limb = 0.85 + 0.15 * nz;
+      const limb = 0.80 + 0.20 * (1 - d); // flat limb darkening — no sphere normals
 
-      if (art.type === 'rock') {
-        const m = _fbm(nx * 3.5 + 9, ny * 3.5);
-        let base = _mix(art.b, art.a, 0.35 + 0.65 * m);
-        const cr = _fbm(nx * 6 + 2, ny * 6 + 4);
-        if (cr > 0.72) base = base.map(c => c * 0.6);
-        col = base.map(c => c * (0.2 + diff * 0.95));
-        col = _mix(col, [0.7, 0.65, 0.6], rim * 0.5);
-      } else if (art.type === 'moon') {
-        let base = _mix(art.b, art.a, 0.55 + 0.45 * _fbm(nx * 2.5 + 1, ny * 2.5));
-        const cr = _fbm(nx * 5 + 7, ny * 5 + 2);
-        if (cr > 0.66) base = base.map(c => c * 0.7);
-        col = base.map(c => c * (0.16 + diff * 1.0));
-        col = _mix(col, [0.8, 0.85, 1.0], rim * 0.55);
-      } else if (art.type === 'ice') {
-        let base = _mix(art.b, art.a, 0.4 + 0.6 * (1 - d));
-        col = base.map(c => c * (0.45 + diff * 0.7));
-        const spec = Math.pow(_cl(nx * LX + ny * LY + nz * LZ, 0, 1), 22);
-        col = _mix(col, [1, 1, 1], spec * 0.8);
-        col = _mix(col, [0.7, 0.95, 1.0], rim * 0.6);
-      } else if (art.type === 'planet') {
-        const land = _fbm(nx * 2.6 + 4, ny * 2.6 + 1);
-        let base = _mix(art.b, art.a, 0.45 + 0.55 * (1 - d)); // ocean
-        if (land > 0.56) base = _mix(base, [0.20, 0.58, 0.28], _ss(0.56, 0.7, land)); // land
-        if (Math.abs(ny) > 0.72) base = _mix(base, [0.92, 0.96, 1.0], _ss(0.72, 0.9, Math.abs(ny))); // ice caps
-        const cloud = _fbm(nx * 3.2 + 20, ny * 2.4 + 11);
-        base = _mix(base, [0.95, 0.97, 1.0], _ss(0.62, 0.8, cloud) * 0.7);
-        col = base.map(c => c * (0.12 + diff * 1.05));
-        col = _mix(col, [0.45, 0.7, 1.0], rim * 0.85); // atmosphere
-      } else if (art.type === 'ringed') {
-        const band = 0.5 + 0.5 * Math.sin(ny * 9 + nx * 1.5);
-        let base = _mix(art.b, art.a, 0.4 + 0.6 * band);
-        col = base.map(c => c * (0.18 + diff * 1.0));
-        col = _mix(col, [1.0, 0.9, 0.7], rim * 0.5);
-      } else if (art.type === 'star') {
-        const gran = _fbm(nx * 5 + tier, ny * 5 + 3);
-        col = _mix(art.b, art.a, 0.3 + 0.7 * gran).map(c => c * limb);
-        col = _mix(col, [1, 1, 0.95], Math.pow(1 - d, 2) * 0.6); // hot core
-      } else if (art.type === 'galaxy') {
+      if (tier === 0) {
+        // ASTEROID — sandy ochre, etching-hatch texture, stippled craters
+        let c = [0.54, 0.36, 0.16];
+        c = _mix(c, [0.34, 0.20, 0.08], (Math.sin(ny * 18 + nx * 6) * 0.5 + 0.5) * 0.32);
+        const CX = [ 0.22, -0.38,  0.05, -0.15,  0.40];
+        const CY = [-0.14,  0.28,  0.42, -0.40,  0.10];
+        const CR = [ 0.18,  0.13,  0.10,  0.15,  0.09];
+        for (let i = 0; i < 5; i++) {
+          const cd = Math.hypot(nx - CX[i], ny - CY[i]);
+          if (cd < CR[i]) {
+            c = _mix(c, [0.22, 0.12, 0.05], _ss(CR[i], CR[i] * 0.5, cd) * 0.70);
+            if (cd > CR[i] * 0.78) c = _mix(c, [0.72, 0.54, 0.28], 0.26);
+          }
+        }
+        col = c.map(v => _cl(v * limb + grain, 0, 1));
+
+      } else if (tier === 1) {
+        // COMET / ICE WORLD — cream-teal, hard concentric rings
+        const rings = Math.floor(d * 4) / 4;
+        let c = _mix([0.86, 0.92, 0.90], [0.32, 0.64, 0.60], rings * 0.65);
+        c = _mix(c, [0.96, 0.97, 0.94], (1 - d * 1.5) * 0.50);
+        col = c.map(v => _cl(v * limb + grain * 0.5, 0, 1));
+
+      } else if (tier === 2) {
+        // MOON — warm ash gray, value-noise base, hard craters with central peak
+        let c = _mix([0.48, 0.44, 0.40], [0.68, 0.64, 0.60], _vn(nx * 4.5 + 2, ny * 4.5 + 3));
+        const MCX = [ 0.20, -0.35,  0.42, -0.12,  0.08, -0.44];
+        const MCY = [ 0.32, -0.20, -0.08,  0.44, -0.38,  0.14];
+        const MCR = [ 0.16,  0.20,  0.12,  0.18,  0.22,  0.11];
+        for (let i = 0; i < 6; i++) {
+          if (Math.hypot(MCX[i], MCY[i]) + MCR[i] > 0.96) continue;
+          const cd = Math.hypot(nx - MCX[i], ny - MCY[i]);
+          if (cd < MCR[i]) {
+            c = _mix(c, [0.30, 0.27, 0.24], _ss(MCR[i], MCR[i] * 0.45, cd) * 0.68);
+            if (cd < MCR[i] * 0.10) c = _mix(c, [0.82, 0.80, 0.76], 0.60); // peak
+          }
+        }
+        col = c.map(v => _cl(v * limb + grain * 0.7, 0, 1));
+
+      } else if (tier === 3) {
+        // MARS-TYPE PLANET — brick/rust, latitude bands, cream polar cap
+        const py = Math.abs(ny);
+        let c;
+        if (py > 0.76) {
+          c = _mix([0.80, 0.52, 0.32], [0.94, 0.88, 0.78], _ss(0.76, 0.94, py));
+        } else {
+          const band = Math.sin(ny * 4.5 + 0.3) * 0.5 + 0.5;
+          c = _mix([0.70, 0.26, 0.12], [0.84, 0.54, 0.24], band);
+          const edge = Math.abs(Math.sin(ny * 4.5 + 0.3));
+          if (edge < 0.12) c = _mix(c, [0.44, 0.16, 0.08], (0.12 - edge) / 0.12 * 0.40);
+        }
+        col = c.map(v => _cl(v * limb + grain * 0.4, 0, 1));
+
+      } else if (tier === 4) {
+        // GAS GIANT — marigold/ochre, hard horizontal bands, polar darkening
+        const bv = Math.sin(ny * 7.5 + 0.4) * 0.5 + 0.5;
+        let c = _mix([0.76, 0.50, 0.20], [0.94, 0.74, 0.38], bv);
+        const pv = Math.abs(ny);
+        if (pv > 0.60) c = c.map(v => v * (1 - (pv - 0.60) * 0.75));
+        col = c.map(v => _cl(v * limb + grain * 0.4, 0, 1));
+
+      } else if (tier === 5) {
+        // YELLOW DWARF STAR — cream-marigold, hard concentric bands, sunspots
+        const rings = Math.floor(d * 5) / 5;
+        let c = _mix([0.98, 0.94, 0.72], [0.92, 0.64, 0.20], rings);
+        c = _mix(c, [1.0, 0.98, 0.88], (1 - d * 1.6) * 0.55);
+        if (_hash(nx * 8.3 + 3, ny * 7.1 + 5) < 0.08) c = _mix(c, [0.50, 0.28, 0.08], 0.60);
+        col = c.map(v => _cl(v + grain * 0.3, 0, 1));
+
+      } else if (tier === 6) {
+        // RED GIANT — deep brick/crimson, convection cell banding
+        const conv = _vn(nx * 3.5 + 7, ny * 3.0 + 2);
+        let c = _mix([0.78, 0.20, 0.08], [0.92, 0.44, 0.16], Math.sin(ny * 5 + conv * 0.8) * 0.5 + 0.5);
+        if (conv < 0.28) c = _mix(c, [0.46, 0.08, 0.04], 0.55);
+        col = c.map(v => _cl(v * (0.82 + 0.18 * (1 - d * 0.5)) + grain * 0.25, 0, 1));
+
+      } else if (tier === 7) {
+        // GALAXY — teal spiral arms, warm cream core, dark inter-arm voids
         const ang = Math.atan2(ny, nx);
-        const arms = 0.5 + 0.5 * Math.sin(2 * ang + d * 7.0);
-        const armGlow = Math.pow(arms, 2.2) * (1 - d) * 1.3;
-        const core = Math.pow(_cl(1 - d * 1.6, 0, 1), 2) * 1.6;
-        col = _mix(art.b, art.a, _cl(armGlow, 0, 1));
-        col = _mix(col, [1, 1, 1], _cl(core, 0, 1));
-        col = col.map((c, i) => c * (0.35 + 0.65 * _cl(armGlow + core, 0, 1)) + [0.05, 0.02, 0.1][i]);
-      } else if (art.type === 'hole') {
-        col = [0, 0, 0];
-        const ring = _ss(0.78, 0.9, d) * _ss(1.0, 0.92, d); // bright photon ring
-        col = _mix(col, [1.0, 0.78, 0.4], _cl(ring * 1.6, 0, 1));
-        const top = _ss(0.0, 0.4, ny) * _ss(0.9, 0.75, d); // lensed light arc over top
-        col = _mix(col, [1.0, 0.9, 0.7], top * 0.5);
+        const onArm = ((ang + d * 4.5) % Math.PI) / Math.PI < 0.40;
+        const core = _cl((0.38 - d) * 4, 0, 1);
+        let c;
+        if (core > 0.1) {
+          c = _mix([0.72, 0.58, 0.38], [0.96, 0.88, 0.72], core);
+        } else if (onArm) {
+          c = _mix([0.16, 0.56, 0.52], [0.28, 0.72, 0.66], 1 - d);
+          c = _mix(c, [0.80, 0.56, 0.22], d * 0.25);
+        } else {
+          c = _mix([0.06, 0.14, 0.18], [0.12, 0.26, 0.28], 1 - d);
+        }
+        col = c.map(v => _cl(v + grain * 0.4, 0, 1));
+
+      } else if (tier === 8) {
+        // BLACK HOLE — near-black, hard marigold photon ring, faint lensed arc
+        const inRing = d > 0.70 && d < 0.88;
+        const lensArc = ny < -0.44 && d > 0.52 && d < 0.75;
+        if (inRing) {
+          col = _mix([0.70, 0.36, 0.08], [0.98, 0.70, 0.24], Math.sin((d - 0.70) / 0.18 * Math.PI));
+        } else if (lensArc) {
+          const s = (d - 0.52) / 0.23;
+          col = _mix([0.44, 0.22, 0.06], [0.0, 0.0, 0.0], s * s);
+        } else {
+          col = [0.03, 0.01, 0.03];
+        }
       }
+
       al = 1;
       if (d > 0.985) al = _ss(1.0, 0.985, d); // 1px edge feather
+
     } else {
-      // glow halo
+      // outer halo — only stars (5,6) and galaxy (7) get visible warm/teal glow
       const t = _cl(1 - (d - 1) / (GLOW_MAX - 1), 0, 1);
-      al = art.gs * Math.pow(t, 2.4);
-      col = art.glow.slice();
+      if (tier === 5) { al = 0.52 * Math.pow(t, 3.2); col = [0.94, 0.62, 0.18]; }
+      else if (tier === 6) { al = 0.48 * Math.pow(t, 3.2); col = [0.80, 0.18, 0.06]; }
+      else if (tier === 7) { al = 0.32 * Math.pow(t, 3.8); col = [0.20, 0.58, 0.54]; }
+      else { al = 0; col = [0, 0, 0]; }
     }
 
     let out = [col[0], col[1], col[2], al];
-    if (art.type === 'ringed') {
-      const ring = _ringSample(nx, ny);
+
+    // Saturn rings composite — front rings over body, back rings occluded by body
+    if (tier === 4) {
+      const ring = _posterRing(nx, ny);
       if (ring) {
         const front = ny > 0;
         const occluded = d <= 1 && !front;
@@ -167,6 +231,7 @@
         }
       }
     }
+
     return [_cl(out[0], 0, 1) * 255, _cl(out[1], 0, 1) * 255, _cl(out[2], 0, 1) * 255, _cl(out[3], 0, 1) * 255];
   }
 
