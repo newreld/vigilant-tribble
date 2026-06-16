@@ -24,6 +24,29 @@ const VIEWS = [
   { name: 'tablet', width: 820, height: 1000 },
 ];
 
+// Drop pieces via the core API — bypasses pointer events, works reliably in headless.
+async function playDrops(page, name) {
+  const booted = await page.evaluate(() => !!window.__cosmic);
+  if (!booted) throw new Error('window.__cosmic not available');
+  // seed with a fixed value for reproducible screenshots
+  await page.evaluate(() => window.__cosmic.reset(0xdeadbeef));
+  for (let i = 0; i < 20; i++) {
+    const ok = await page.evaluate((i) => {
+      const C = window.__cosmic;
+      if (!C || C.world.over || !C.world.current) return false;
+      // spread pieces across the field in a repeating pattern
+      const x = C.FIELD_W * (0.15 + 0.70 * ((i * 0.37) % 1));
+      C.moveCurrent(x);
+      return C.dropCurrent();
+    }, i);
+    if (!ok) break;
+    await page.waitForTimeout(350); // let physics settle
+  }
+  const score = await page.evaluate(() => window.__cosmic.world.score);
+  const bodies = await page.evaluate(() => window.__cosmic.world.bodies.length);
+  console.log(`  ${name}: score=${score} bodies=${bodies}`);
+}
+
 (async () => {
   await new Promise(r => server.listen(PORT, r));
   fs.mkdirSync('screenshots', { recursive: true });
@@ -33,62 +56,59 @@ const VIEWS = [
       const ctx = await browser.newContext({ viewport: { width: v.width, height: v.height }, deviceScaleFactor: 2 });
       const page = await ctx.newPage();
       await page.goto(`http://localhost:${PORT}/index.html`, { waitUntil: 'load', timeout: 30000 });
-      await page.waitForTimeout(3000); // fonts + boot + sprite bake (extra buffer)
-      // play: drop a series of pieces across the field so the board isn't empty
+      await page.waitForTimeout(3000); // fonts + boot + sprite bake
       try {
-        // wait for the game canvas to be present and interactive
-        await page.waitForSelector('#game', { state: 'visible', timeout: 5000 });
-        const box = await (await page.$('#game')).boundingBox();
-        if (!box || box.width === 0) throw new Error('game canvas has no bounding box');
-        console.log(`  ${v.name}: game canvas at x=${box.x.toFixed(0)} y=${box.y.toFixed(0)} w=${box.width.toFixed(0)} h=${box.height.toFixed(0)}`);
-        for (let i = 0; i < 18; i++) {
-          const x = box.x + box.width * (0.18 + 0.64 * ((i * 0.37) % 1));
-          const y = box.y + 40;
-          await page.mouse.move(x, y);
-          await page.mouse.down(); await page.mouse.up();
-          await page.waitForTimeout(480);
-        }
-        // verify drops landed (score or bodies)
-        const score = await page.evaluate(() => window.__cosmic && window.__cosmic.world.score);
-        const bodies = await page.evaluate(() => window.__cosmic && window.__cosmic.world.bodies.length);
-        console.log(`  ${v.name}: score=${score} bodies=${bodies}`);
-      } catch (e) { console.log('  play step skipped: ' + e.message); }
-      await page.waitForTimeout(2000);
+        await playDrops(page, v.name);
+      } catch (e) { console.log(`  ${v.name} play step skipped: ` + e.message); }
+      await page.waitForTimeout(1500); // settle
       await page.screenshot({ path: `screenshots/${v.name}.png` });
       console.log('  wrote screenshots/' + v.name + '.png');
       await ctx.close();
     }
+
     // UI overlays: game-over card + Star Chart (driven via the exposed core)
     try {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
       const page = await ctx.newPage();
       await page.goto(`http://localhost:${PORT}/index.html`, { waitUntil: 'load', timeout: 30000 });
       await page.waitForTimeout(3000);
-      // verify the game booted
       const booted = await page.evaluate(() => !!window.__cosmic);
       if (!booted) throw new Error('window.__cosmic not available after boot');
-      // populate a profile + trigger game over (injecting all event fields v0.8 expects)
+
+      // Drop some pieces first so the field isn't empty behind the overlay
+      await page.evaluate(() => window.__cosmic.reset(42));
+      for (let i = 0; i < 12; i++) {
+        await page.evaluate((i) => {
+          const C = window.__cosmic;
+          if (!C || C.world.over || !C.world.current) return;
+          C.moveCurrent(C.FIELD_W * (0.15 + 0.70 * ((i * 0.37) % 1)));
+          C.dropCurrent();
+        }, i);
+        await page.waitForTimeout(320);
+      }
+      await page.waitForTimeout(800);
+
+      // Inject a populated profile + trigger game-over event
       await page.evaluate(() => {
         const C = window.__cosmic;
         C.meta.stardust = 1850;
         C.metaUnlock('theme_aurora'); // owned + auto-worn; rest stay buyable
-        C.world.score = 12345;
-        C.world.drops = 34;
-        C.world.peakCombo = 5;
-        C.world.topTier = 6; // Star
+        C.world.score = 12345; C.world.best = 12345;
+        C.world.drops = 34; C.world.peakCombo = 5; C.world.topTier = 6;
+        C.world.over = true;
         C.world.events.push({
           type: 'gameover', earned: 167, modified: false,
           drops: 34, peakCombo: 5, topTier: 6,
+          daily: false, isNewDailyBest: false, dailyStreak: 0, streakBonus: 0,
         });
-        C.world.over = true;
       });
+      // Wait for drainEvents() to run (one rAF cycle is enough, 500ms is plenty)
       await page.waitForTimeout(500);
-      // confirm game-over overlay appeared
       const goVisible = await page.evaluate(() => !document.getElementById('gameover').classList.contains('hidden'));
       if (!goVisible) throw new Error('game-over overlay did not appear');
       await page.screenshot({ path: 'screenshots/gameover.png' });
       console.log('  wrote screenshots/gameover.png');
-      // open the Star Chart from the game-over card
+      // Open the Star Chart
       await page.click('#open-chart');
       await page.waitForTimeout(500);
       await page.screenshot({ path: 'screenshots/starchart.png' });
