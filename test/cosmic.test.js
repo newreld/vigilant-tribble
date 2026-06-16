@@ -188,6 +188,20 @@ stepN(3);
 ok(!C.world.events.some(e => e.type === 'codex_unlock' && e.tier === 1),
    'no codex_unlock event when tier is already discovered');
 
+// codex bonus: higher tiers award one-time stardust
+ok(C.CODEX_BONUS[4] === 25 && C.CODEX_BONUS[8] === 500, 'CODEX_BONUS values defined correctly');
+C.metaReset(); C.reset(17);
+const sdBefore = C.meta.stardust;
+C.world.bodies = [
+  { id: 984, tier: 3, x: 170, y: Hf - T[3].r, vx: 0, vy: 0, age: 1 },
+  { id: 985, tier: 3, x: 210, y: Hf - T[3].r, vx: 0, vy: 0, age: 1 },
+];
+C.world.events.length = 0;
+stepN(3);
+const cxBonusEv = C.world.events.find(e => e.type === 'codex_unlock' && e.tier === 4);
+ok(cxBonusEv && cxBonusEv.bonus === 25, 'codex_unlock event for Ringed carries the bonus amount');
+ok(C.meta.stardust === sdBefore + 25, 'first Ringed Planet discovery awards +25 stardust immediately');
+
 // --- summary -------------------------------------------------------------
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

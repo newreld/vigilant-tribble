@@ -319,6 +319,10 @@
   ];
   const META_BY_ID = {}; for (const it of META_ITEMS) META_BY_ID[it.id] = it;
 
+  // one-time stardust bonus for first-ever discovery of each tier (index = tier).
+  // Tiers 0-3 are made constantly and give no bonus; the bigger the tier, the bigger the reward.
+  const CODEX_BONUS = [0, 0, 0, 0, 25, 50, 100, 250, 500];
+
   const meta = {
     stardust: 0,
     unlocked: {},      // id -> true
@@ -480,10 +484,12 @@
       world.bodies = world.bodies.filter(b => b !== a && b !== c);
       world.bodies.push(nb);
       world.events.push({ type: 'merge', x: nx, y: ny, tier: nt, id: nb.id });
-      // first time this tier has been created by merge → codex discovery
+      // first time this tier has been created by merge → codex discovery + one-time bonus
       if (!meta.codex[nt]) {
         meta.codex[nt] = true;
-        world.events.push({ type: 'codex_unlock', tier: nt, x: nx, y: ny });
+        const bonus = CODEX_BONUS[nt] || 0;
+        if (bonus) meta.stardust += bonus; // instant bonus; persisted by saveMeta in the handler
+        world.events.push({ type: 'codex_unlock', tier: nt, x: nx, y: ny, bonus });
       }
       merged++;
     }
@@ -552,7 +558,7 @@
     reset, step, dropCurrent, moveCurrent, spawnCurrent, pickTier, mulberry32,
     TIER_ART, GLOW_MAX, shadeBody, useSupernova, CHARGE_MAX,
     meta, META_ITEMS, metaReset, stardustForScore, metaUnlock, metaEquip,
-    metaSetTheme, equippedMods };
+    metaSetTheme, equippedMods, CODEX_BONUS };
   if (typeof window !== 'undefined') window.__cosmic = core;
   if (typeof module !== 'undefined' && module.exports) module.exports = core;
 
@@ -787,6 +793,7 @@
     scCodex.innerHTML = '';
     for (let t = 0; t < TIERS.length; t++) {
       const found = t === 0 || !!meta.codex[t]; // tier 0 (Asteroid) always found — you drop them
+      const bonus = CODEX_BONUS[t] || 0;
       const el = document.createElement('div');
       el.className = 'codex-tier' + (found ? ' found' : '');
       const dot = document.createElement('span');
@@ -796,6 +803,12 @@
       lbl.className = 'codex-label';
       lbl.textContent = TIERS[t].name;
       el.append(dot, lbl);
+      if (bonus) {
+        const bon = document.createElement('span');
+        bon.className = 'codex-bonus' + (found ? ' earned' : '');
+        bon.textContent = (found ? '' : '+') + bonus;
+        el.append(bon);
+      }
       scCodex.append(el);
     }
   }
@@ -841,8 +854,10 @@
         if (ev.cleared > 0) floatScore(FIELD_W / 2, FIELD_H / 2, 'SUPERNOVA  +' + ev.cleared * 30, '#ffd9a0');
         [392, 523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.18, 'triangle', 0.16), i * 70));
       } else if (ev.type === 'codex_unlock') {
-        floatScore(ev.x, ev.y - 28, 'FIRST  ' + TIERS[ev.tier].name.toUpperCase() + '!', '#4bb39c');
+        const bonusStr = ev.bonus ? '  +' + ev.bonus : '';
+        floatScore(ev.x, ev.y - 28, 'FIRST  ' + TIERS[ev.tier].name.toUpperCase() + '!' + bonusStr, '#4bb39c');
         [392, 523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.15, 'triangle', 0.18), i * 80));
+        saveMeta(); // persist the discovery + bonus immediately, even mid-run
       } else if (ev.type === 'gameover') {
         elFinal.textContent = world.score;
         const isNewBest = world.score > storedBest && world.score > 0;
