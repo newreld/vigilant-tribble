@@ -684,6 +684,7 @@
   // next-piece preview (mini sprite in the HUD)
   const nctx = (elNext && elNext.getContext) ? elNext.getContext('2d') : null;
   let nextShown = -1, nextShown2 = -1, novaShown = null;
+  let currentSpawnedAt = 0, prevCurrentRef = null; // spawn slide-in animation
   function drawNext() {
     if (!nctx) return;
     const w = elNext.width, h = elNext.height;
@@ -839,7 +840,8 @@
     if (world.over || !world.current) return;
     moveCurrent(toField(e.clientX));
     const dx = world.current ? world.current.x : null;
-    if (dropCurrent()) { blip(220, 0.05, 'square', 0.12); if (dx !== null) dropDust(dx); }
+    const dt = world.current ? world.current.tier : 0;
+    if (dropCurrent()) { blip(380 - dt * 28, 0.05, 'square', 0.11); if (dx !== null) dropDust(dx); }
   });
   canvas.addEventListener('pointercancel', () => { aiming = false; });
   window.addEventListener('keydown', e => {
@@ -849,7 +851,8 @@
     else if (e.key === ' ' || e.key === 'ArrowDown') {
       e.preventDefault();
       const dx = world.current ? world.current.x : null;
-      if (dropCurrent() && dx !== null) dropDust(dx);
+      const dt = world.current ? world.current.tier : 0;
+      if (dropCurrent() && dx !== null) { blip(380 - dt * 28, 0.05, 'square', 0.11); dropDust(dx); }
     }
   });
   // Supernova: fire with the meter (tap) or the 'S' key when charged.
@@ -1108,6 +1111,15 @@
       comboFlash = Math.max(0, comboFlash - 0.04);
     }
 
+    // falling trail: accent sparkles behind freshly-dropped bodies
+    for (const b of world.bodies) {
+      if (b.age < 0.28 && b.vy > 90 && Math.random() < 0.35) {
+        const r = TIERS[b.tier].r;
+        parts.push({ x: b.x + (Math.random() - 0.5) * r * 0.5, y: b.y - r * 0.2,
+          vx: (Math.random() - 0.5) * 0.6, vy: -0.4 - Math.random() * 1.2,
+          life: 0.38, size: 1 + Math.random() * 1.8, color: TIER_ART[b.tier].accent });
+      }
+    }
     for (const b of world.bodies) drawBody(b.x, b.y, b.tier, false, b.id);
 
     // shockwave rings — quick expanding pulse at each merge point
@@ -1121,6 +1133,13 @@
     }
     ctx.globalAlpha = 1;
     if (world.current && !world.over) {
+      // detect piece spawn to start the slide-in animation
+      if (world.current !== prevCurrentRef) { prevCurrentRef = world.current; currentSpawnedAt = performance.now(); }
+      const spawnAge = performance.now() - currentSpawnedAt;
+      const spawnDur = 180; // ms for slide-in
+      const spawnOff = spawnAge < spawnDur ? -28 * (1 - spawnAge / spawnDur) : 0; // slide from above
+      const ghostY = SPAWN_Y + spawnOff;
+
       // landing ring (mod_guide modifier) — approximate where the piece will rest
       if (meta.equipped['mod_guide']) {
         const cr = TIERS[world.current.tier].r, cx = world.current.x;
@@ -1134,9 +1153,9 @@
         ctx.beginPath(); ctx.arc(cx, landY, cr, 0, Math.PI * 2); ctx.stroke();
         ctx.setLineDash([]); ctx.globalAlpha = 1;
       }
-      drawBody(world.current.x, SPAWN_Y, world.current.tier, true);
+      drawBody(world.current.x, ghostY, world.current.tier, true);
       ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4, 6]);
-      ctx.beginPath(); ctx.moveTo(world.current.x, SPAWN_Y); ctx.lineTo(world.current.x, FIELD_H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(world.current.x, ghostY); ctx.lineTo(world.current.x, FIELD_H); ctx.stroke();
       ctx.setLineDash([]);
     }
 
