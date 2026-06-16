@@ -233,8 +233,15 @@ body { display: flex; flex-direction: column; }
 .sc-item {
   display: flex; align-items: center; gap: 12px;
   border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px;
+  position: relative; overflow: hidden;
+}
+/* cosmetic tint: a faint wash of the theme color in the background */
+.sc-item[style*="--item-tint"]::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: var(--item-tint); opacity: 0.1; border-radius: inherit;
 }
 .sc-item.owned { border-color: rgba(75,179,156,.4); }
+.sc-item.owned[style*="--item-tint"]::before { opacity: 0.18; }
 .sc-item-main { flex: 1; min-width: 0; }
 .sc-item-name { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: .5px; color: var(--paper); }
 .sc-item-desc { font-size: 10px; line-height: 1.4; color: var(--muted); margin-top: 2px; }

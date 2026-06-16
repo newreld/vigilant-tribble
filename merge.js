@@ -858,6 +858,7 @@
     const owned = !!meta.unlocked[item.id];
     const el = document.createElement('div');
     el.className = 'sc-item' + (owned ? ' owned' : '');
+    if (item.branch === 'cosmetic' && item.tint) el.style.setProperty('--item-tint', item.tint);
     const main = document.createElement('div'); main.className = 'sc-item-main';
     const name = document.createElement('div'); name.className = 'sc-item-name'; name.textContent = item.name;
     const desc = document.createElement('div'); desc.className = 'sc-item-desc'; desc.textContent = item.desc;
