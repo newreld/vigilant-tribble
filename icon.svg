@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0c080f"/>
+  <!-- field stars -->
+  <circle cx="96"  cy="74"  r="2.2" fill="rgba(255,255,255,0.70)"/>
+  <circle cx="388" cy="112" r="1.8" fill="rgba(240,136,62,0.80)"/>
+  <circle cx="428" cy="388" r="2.0" fill="rgba(255,255,255,0.55)"/>
+  <circle cx="74"  cy="408" r="1.6" fill="rgba(75,179,156,0.75)"/>
+  <circle cx="290" cy="52"  r="1.5" fill="rgba(255,255,255,0.50)"/>
+  <circle cx="440" cy="240" r="1.4" fill="rgba(240,136,62,0.60)"/>
+  <circle cx="52"  cy="200" r="1.8" fill="rgba(255,255,255,0.45)"/>
+  <!-- Black-hole glow halos -->
+  <circle cx="256" cy="232" r="158" fill="rgba(240,136,62,0.05)"/>
+  <circle cx="256" cy="232" r="140" fill="rgba(240,136,62,0.10)"/>
+  <!-- photon ring -->
+  <circle cx="256" cy="232" r="130" fill="none" stroke="#f0883e" stroke-width="24" opacity="0.95"/>
+  <!-- lensed arc (faint secondary image above the void) -->
+  <path d="M 152 198 Q 256 148 360 198" fill="none" stroke="rgba(240,136,62,0.32)" stroke-width="7" stroke-linecap="round"/>
+  <!-- void -->
+  <circle cx="256" cy="232" r="100" fill="#06030d"/>
+  <!-- tilted orbital-ring motif at bottom -->
+  <ellipse cx="256" cy="358" rx="110" ry="20" fill="none" stroke="rgba(241,230,208,0.16)" stroke-width="3" transform="rotate(-10 256 358)"/>
+  <!-- wordmark -->
+  <text x="256" y="464" text-anchor="middle" font-family="'Arial Narrow',Arial,sans-serif" font-weight="900" font-size="52" letter-spacing="5" fill="#f1e6d0" opacity="0.88">COSMIC</text>
+</svg>

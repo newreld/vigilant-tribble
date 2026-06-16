@@ -306,6 +306,8 @@
     const before = world.bodies.length;
     world.bodies = world.bodies.filter(b => b.tier > 1); // blast Asteroids+Comets
     const cleared = before - world.bodies.length;
+    // only consume the charge if there was actually something to clear
+    if (cleared === 0) return false;
     world.score += cleared * 30;
     if (world.score > world.best) world.best = world.score;
     world.charge = 0; world.superReady = false;
@@ -566,7 +568,7 @@
         const rs = TIERS[MAX_TIER].r * 2;
         if (Math.hypot(c.x - a.x, c.y - a.y) < rs * MERGE_OVERLAP) {
           // clear the whole field, huge bonus, fresh start of the board
-          const bonus = 5000 + world.bodies.length * 200;
+          const bonus = 8000 + world.bodies.length * 400;
           world.score += bonus; if (world.score > world.best) world.best = world.score;
           world.events.push({ type: 'bigbang', x: (a.x + c.x) / 2, y: (a.y + c.y) / 2, bonus });
           world.bodies = [];
@@ -709,6 +711,7 @@
   }
 
   let muted = false;
+  try { muted = localStorage.getItem('cosmic.muted') === '1'; } catch (e) {}
   try { world.best = parseInt(localStorage.getItem('cosmic.best') || '0', 10) || 0; } catch (e) {}
   let storedBest = world.best;
   const persistBest = () => { if (world.best > storedBest) { storedBest = world.best; try { localStorage.setItem('cosmic.best', String(storedBest)); } catch (e) {} } };
@@ -781,7 +784,7 @@
     }
     if (parts.length > 500) parts = parts.slice(-500);
   }
-  function floatScore(x, y, text, color) { floaters.push({ x, y, text, color, life: 1 }); }
+  function floatScore(x, y, text, color, slow) { floaters.push({ x, y, text, color, life: 1, decay: slow ? 0.008 : 0.02 }); }
   function shockwave(x, y, maxR, color) { rings.push({ x, y, maxR, color, life: 1 }); }
   function dropDust(x) {
     for (let i = 0; i < 7; i++) {
@@ -848,7 +851,7 @@
     if (!world.current) return;
     if (e.key === 'ArrowLeft') moveCurrent(world.current.x - 18);
     else if (e.key === 'ArrowRight') moveCurrent(world.current.x + 18);
-    else if (e.key === ' ' || e.key === 'ArrowDown') {
+    else if ((e.key === ' ' || e.key === 'ArrowDown') && !e.repeat) {
       e.preventDefault();
       const dx = world.current ? world.current.x : null;
       const dt = world.current ? world.current.tier : 0;
@@ -860,7 +863,12 @@
   if (elNova) elNova.addEventListener('click', fireSupernova);
   window.addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') fireSupernova(); });
   $('restart').addEventListener('click', () => { world.daily = false; reset(); elOver.classList.add('hidden'); });
-  $('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false'); if (!muted) blip(660, 0.1); });
+  $('muteBtn').addEventListener('click', () => {
+    muted = !muted;
+    $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false');
+    try { localStorage.setItem('cosmic.muted', muted ? '1' : '0'); } catch (e) {}
+    if (!muted) blip(660, 0.1);
+  });
 
   // ---- Star Chart: spend stardust earned by playing -----------------------
   const scBalance = $('sc-balance'), scCosmetic = $('sc-cosmetic'), scModifier = $('sc-modifier'), scCodex = $('sc-codex');
@@ -982,7 +990,7 @@
         [392, 523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.18, 'triangle', 0.16), i * 70));
       } else if (ev.type === 'milestone') {
         shake = Math.min(shake + 6, 18);
-        floatScore(ev.x, ev.y, ev.label + '!', '#f1e6d0');
+        floatScore(ev.x, ev.y, ev.label + '!', '#f1e6d0', true); // slow=true: lingers ~2s
         [523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.14, 'triangle', 0.14), i * 65));
       } else if (ev.type === 'codex_unlock') {
         const bonusStr = ev.bonus ? '  +' + ev.bonus : '';
@@ -1146,7 +1154,11 @@
         let landY = FIELD_H - cr;
         for (const b of world.bodies) {
           const br = TIERS[b.tier].r;
-          if (Math.abs(b.x - cx) < cr + br) { const top = b.y - br - cr; if (top < landY) landY = top; }
+          const dx = b.x - cx;
+          if (Math.abs(dx) < cr + br) {
+            const top = b.y - Math.sqrt((cr + br) * (cr + br) - dx * dx);
+            if (top < landY) landY = top;
+          }
         }
         ctx.globalAlpha = 0.4; ctx.strokeStyle = 'rgba(255,255,255,0.65)';
         ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
@@ -1181,7 +1193,8 @@
 
     // floaters
     for (let i = floaters.length - 1; i >= 0; i--) {
-      const f = floaters[i]; f.y -= 0.6; f.life -= 0.02;
+      const f = floaters[i]; f.y -= 0.6;
+      f.life -= f.decay || 0.02;
       if (f.life <= 0) { floaters.splice(i, 1); continue; }
       ctx.globalAlpha = Math.max(0, f.life); ctx.fillStyle = f.color || '#fff';
       ctx.font = '700 22px "Big Shoulders Display", "Arial Narrow", sans-serif';
@@ -1210,8 +1223,8 @@
     }
 
     // HUD
-    elScore.textContent = world.score;
-    elBest.textContent = world.best;
+    elScore.textContent = world.score.toLocaleString();
+    elBest.textContent = world.best.toLocaleString();
     if (elDailyBadge) elDailyBadge.classList.toggle('hidden', !world.daily);
     if (world.next !== nextShown || world.next2 !== nextShown2) { drawNext(); nextShown = world.next; nextShown2 = world.next2; }
     elCombo.textContent = world.combo > 1 ? 'COMBO ×' + world.combo : '';
@@ -1250,5 +1263,7 @@
   for (let t = 0; t < TIERS.length; t++) sprite(t); // pre-bake so first frames are instant
   reset();     // must run before drawNext so world.next is not null
   drawNext();
+  // sync mute button visual with persisted state
+  if (muted) $('muteBtn').setAttribute('aria-pressed', 'true');
   requestAnimationFrame(loop);
 })();

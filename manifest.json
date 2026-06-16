@@ -1,0 +1,33 @@
+{
+  "name": "Cosmic Merge",
+  "short_name": "COSMIC",
+  "description": "A physics merge game set in deep space. Drop celestial bodies, chain merges, collapse stars.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0c080f",
+  "theme_color": "#0c080f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games"],
+  "screenshots": [
+    {
+      "src": "screenshots/phone.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "screenshots/tablet.png",
+      "sizes": "1640x2000",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
+}
