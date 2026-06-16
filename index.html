@@ -24,8 +24,11 @@
         <span class="hud-label">BEST</span>
         <span class="hud-value" id="best">0</span>
       </div>
-      <div class="next-ring" title="Next">
-        <canvas id="next-canvas" width="52" height="52"></canvas>
+      <div class="next-piece">
+        <div class="next-ring" title="Next">
+          <canvas id="next-canvas" width="52" height="52"></canvas>
+        </div>
+        <span class="next-name" id="next-name"></span>
       </div>
       <button id="muteBtn" aria-label="Toggle sound" aria-pressed="false">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
@@ -56,6 +59,7 @@
       <div class="go-label">FINAL SCORE</div>
       <div class="go-final" id="final-score">0</div>
       <div id="new-best" class="hidden">NEW BEST</div>
+      <div class="go-stats" id="go-stats"></div>
       <div class="go-stardust"><span id="go-earned">+0</span> stardust earned</div>
       <button id="restart">PLAY AGAIN</button>
       <button id="open-chart" type="button">STAR CHART · <span id="go-balance">0</span><i class="dust-mark"></i></button>

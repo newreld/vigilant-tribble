@@ -268,6 +268,8 @@
     idSeq: 1,
     events: [], // {type, x, y, tier} consumed by the renderer for juice
     milestoneAt: 0, // highest score milestone already announced this run
+    // run stats: tracked per session, shown on game-over, reset on reset()
+    drops: 0, peakCombo: 0, topTier: 0,
   };
 
   // ---- Supernova: an in-run, earned tool — NOT meta-progression ------------
@@ -368,6 +370,7 @@
     world.dropTimer = 0; world.combo = 0; world.comboTimer = 0;
     world.charge = 0; world.superReady = false;
     world.idSeq = 1; world.events = []; world.milestoneAt = 0;
+    world.drops = 0; world.peakCombo = 0; world.topTier = 0;
     // apply the equipped loadout. Equipping any modifier flags the run as
     // "modified" so it won't set the fair Classic record.
     world.graceMult = 1;
@@ -400,6 +403,7 @@
     });
     world.current = null;
     world.dropTimer = DROP_COOLDOWN;
+    world.drops++;
     return true;
   }
 
@@ -486,6 +490,7 @@
       world.bodies = world.bodies.filter(b => b !== a && b !== c);
       world.bodies.push(nb);
       world.events.push({ type: 'merge', x: nx, y: ny, tier: nt, id: nb.id });
+      if (nt > world.topTier) world.topTier = nt;
       // first time this tier has been created by merge → codex discovery + one-time bonus
       if (!meta.codex[nt]) {
         meta.codex[nt] = true;
@@ -497,6 +502,7 @@
     }
     if (merged > 0) {
       world.combo += merged; world.comboTimer = 1.1;
+      if (world.combo > world.peakCombo) world.peakCombo = world.combo;
       addCharge(merged + Math.max(0, world.combo - 1)); // chains charge faster
       const mult = 1 + (world.combo - 1) * 0.5;
       // score the new tiers created
@@ -555,7 +561,8 @@
         const earned = stardustForScore(world.score);
         meta.stardust += earned;
         if (!world.modified && world.score > meta.bestClassic) meta.bestClassic = world.score;
-        world.events.push({ type: 'gameover', earned, modified: world.modified });
+        world.events.push({ type: 'gameover', earned, modified: world.modified,
+          drops: world.drops, peakCombo: world.peakCombo, topTier: world.topTier });
       }
     } else {
       world.overTimer = Math.max(0, world.overTimer - h * 2);
@@ -631,6 +638,7 @@
     nctx.clearRect(0, 0, w, h);
     const sp = sprite(world.next);
     if (sp && sp.cv) { const sz = Math.min(w, h) * 0.96; nctx.drawImage(sp.cv, (w - sz) / 2, (h - sz) / 2, sz, sz); }
+    if (elNextName) elNextName.textContent = TIERS[world.next].name;
   }
 
   let muted = false;
@@ -769,6 +777,7 @@
 
   // ---- Star Chart: spend stardust earned by playing -----------------------
   const scBalance = $('sc-balance'), scCosmetic = $('sc-cosmetic'), scModifier = $('sc-modifier'), scCodex = $('sc-codex');
+  const elGoStats = $('go-stats'), elNextName = $('next-name');
   function chartItemEl(item) {
     const owned = !!meta.unlocked[item.id];
     const el = document.createElement('div');
@@ -876,6 +885,11 @@
         const isNewBest = world.score > storedBest && world.score > 0;
         persistBest();
         elNewBest.classList.toggle('hidden', !isNewBest);
+        if (elGoStats) {
+          const topName = ev.topTier > 0 ? TIERS[ev.topTier].name : '—';
+          elGoStats.innerHTML =
+            `<span>${ev.drops || 0} drops</span><span>×${ev.peakCombo || 1} peak combo</span><span>${topName}</span>`;
+        }
         if (elGoEarned) elGoEarned.textContent = '+' + (ev.earned || 0);
         if (elGoBalance) elGoBalance.textContent = meta.stardust;
         saveMeta();
@@ -934,6 +948,16 @@
     ctx.beginPath(); ctx.moveTo(0, DANGER_Y); ctx.lineTo(FIELD_W, DANGER_Y); ctx.stroke();
     ctx.restore();
     ctx.setLineDash([]);
+    // danger vignette — red edge bleed builds up as the grace timer ticks
+    if (danger) {
+      try {
+        const frac = Math.min(world.overTimer / (OVER_GRACE * (world.graceMult || 1)), 1);
+        const dv = ctx.createRadialGradient(FIELD_W / 2, FIELD_H, FIELD_W * 0.28, FIELD_W / 2, FIELD_H, FIELD_W * 0.9);
+        dv.addColorStop(0, 'rgba(0,0,0,0)');
+        dv.addColorStop(1, `rgba(210,74,44,${(frac * 0.22).toFixed(3)})`);
+        ctx.fillStyle = dv; ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      } catch (_) {}
+    }
 
     for (const b of world.bodies) drawBody(b.x, b.y, b.tier, false, b.id);
 

@@ -67,12 +67,14 @@ body { display: flex; flex-direction: column; }
 .hud-value { font-size: 26px; font-weight: 600; color: var(--marigold); font-variant-numeric: tabular-nums; }
 .stat.secondary .hud-value { font-size: 16px; color: var(--muted); font-weight: 500; }
 
-/* next-piece — framed by the orbital ring motif */
+/* next-piece — framed by the orbital ring motif, with tier name below */
+.next-piece { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .next-ring {
   width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
 #next-canvas { width: 36px; height: 36px; display: block; }
+.next-name { font-size: 7px; letter-spacing: 1px; color: var(--muted); font-family: var(--mono); }
 
 #muteBtn {
   background: none; color: var(--muted); border: 1px solid var(--line);
@@ -150,7 +152,11 @@ body { display: flex; flex-direction: column; }
 #restart:hover { background: #ff954a; }
 #restart:active { transform: translateY(4px); box-shadow: 0 0 0 var(--marigold-dim); }
 .go-note { font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-top: 16px; }
-.go-stardust { font-size: 11px; letter-spacing: 1px; color: var(--teal); margin-top: 14px; }
+.go-stats {
+  display: flex; justify-content: center; gap: 16px; margin-top: 14px;
+  font-size: 9px; letter-spacing: 1.5px; color: var(--muted);
+}
+.go-stardust { font-size: 11px; letter-spacing: 1px; color: var(--teal); margin-top: 10px; }
 .go-stardust #go-earned { font-weight: 600; }
 
 /* a small hand-built sparkle — currency mark, in the spirit of the CSS orbit
