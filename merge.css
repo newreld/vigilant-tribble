@@ -195,6 +195,10 @@ body { display: flex; flex-direction: column; }
   margin-top: 10px; font-size: 10px; letter-spacing: 2px;
   color: var(--teal); font-family: var(--mono);
 }
+.go-streak {
+  margin-top: 6px; font-size: 10px; letter-spacing: 2px;
+  color: var(--marigold); font-family: var(--mono);
+}
 
 /* secondary button — quiet outline, distinct from the marigold PLAY AGAIN */
 #open-chart {

@@ -248,6 +248,28 @@ for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
 ok(C.world.over && C.meta.bestDailyScore === 5000, 'daily run sets bestDailyScore (got ' + C.meta.bestDailyScore + ')');
 ok(C.meta.bestDailyDate === C.todayStr(), 'bestDailyDate matches today');
 
+// streak tracking
+C.metaReset(); C.world.daily = true; C.reset(20);
+C.world.score = 500; C.world.over = false; C.world.overTimer = 999;
+C.world.bodies = [{ id: 1000, tier: 3, x: C.FIELD_W / 2, y: C.DANGER_Y - 5, vx: 0, vy: 0, age: 1 }];
+for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
+ok(C.meta.dailyStreak === 1, 'first daily sets streak to 1');
+ok(C.meta.lastDailyDate === C.todayStr(), 'lastDailyDate set to today');
+// replay today: streak stays 1, lastDailyDate stays today
+C.world.daily = true; C.reset(20);
+C.world.score = 600; C.world.over = false; C.world.overTimer = 999;
+C.world.bodies = [{ id: 1001, tier: 3, x: C.FIELD_W / 2, y: C.DANGER_Y - 5, vx: 0, vy: 0, age: 1 }];
+for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
+ok(C.meta.dailyStreak === 1, 'replaying today does not increment streak');
+// simulate yesterday play by setting lastDailyDate to yesterday
+C.meta.lastDailyDate = C.offsetDayStr(-1);
+C.meta.dailyStreak = 3;
+C.world.daily = true; C.reset(20);
+C.world.score = 700; C.world.over = false; C.world.overTimer = 999;
+C.world.bodies = [{ id: 1002, tier: 3, x: C.FIELD_W / 2, y: C.DANGER_Y - 5, vx: 0, vy: 0, age: 1 }];
+for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
+ok(C.meta.dailyStreak === 4, 'streak increments when previous play was yesterday (got ' + C.meta.dailyStreak + ')');
+
 // --- summary -------------------------------------------------------------
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

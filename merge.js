@@ -259,6 +259,10 @@
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
+  function offsetDayStr(offset) {
+    const d = new Date(); d.setDate(d.getDate() + offset);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
 
   // ---- seedable RNG (deterministic for tests) -----------------------------
   function mulberry32(a) {
@@ -352,12 +356,15 @@
     codex: new Array(TIERS.length).fill(false), // which tiers have been created by merge (ever)
     bestDailyScore: 0, // personal best on today's daily seed
     bestDailyDate: '', // 'YYYY-MM-DD' of the day the daily best was set
+    dailyStreak: 0,    // consecutive days with at least one daily run
+    lastDailyDate: '', // 'YYYY-MM-DD' of most recent daily play (any score)
   };
   function metaReset() {
     meta.stardust = 0; meta.unlocked = {}; meta.equipped = {};
     meta.theme = null; meta.bestClassic = 0;
     meta.codex = new Array(TIERS.length).fill(false);
     meta.bestDailyScore = 0; meta.bestDailyDate = '';
+    meta.dailyStreak = 0; meta.lastDailyDate = '';
   }
   // Stardust from a run: scales with score but sub-linearly (sqrt), so a single
   // huge run can't trivialize the economy and grinding stays meaningful.
@@ -584,17 +591,30 @@
         const earned = stardustForScore(world.score);
         meta.stardust += earned;
         if (!world.modified && world.score > meta.bestClassic) meta.bestClassic = world.score;
-        let isNewDailyBest = false;
+        let isNewDailyBest = false, dailyStreak = 0, streakBonus = 0;
         if (world.daily) {
           const today = todayStr();
           if (today !== meta.bestDailyDate || world.score > meta.bestDailyScore) {
             isNewDailyBest = true;
             meta.bestDailyScore = world.score; meta.bestDailyDate = today;
           }
+          // streak: increment only once per new day
+          if (meta.lastDailyDate !== today) {
+            const yesterday = offsetDayStr(-1);
+            if (meta.lastDailyDate === yesterday) {
+              meta.dailyStreak++;
+            } else {
+              meta.dailyStreak = 1; // first daily, or streak broken
+            }
+            meta.lastDailyDate = today;
+            streakBonus = meta.dailyStreak * 5; // +5 stardust per streak day
+            meta.stardust += streakBonus;
+          }
+          dailyStreak = meta.dailyStreak;
         }
         world.events.push({ type: 'gameover', earned, modified: world.modified,
           drops: world.drops, peakCombo: world.peakCombo, topTier: world.topTier,
-          daily: world.daily, isNewDailyBest });
+          daily: world.daily, isNewDailyBest, dailyStreak, streakBonus });
       }
     } else {
       world.overTimer = Math.max(0, world.overTimer - h * 2);
@@ -606,7 +626,7 @@
     reset, step, dropCurrent, moveCurrent, spawnCurrent, pickTier, mulberry32,
     TIER_ART, GLOW_MAX, shadeBody, useSupernova, CHARGE_MAX,
     meta, META_ITEMS, metaReset, stardustForScore, metaUnlock, metaEquip,
-    metaSetTheme, equippedMods, CODEX_BONUS, dailySeed, todayStr };
+    metaSetTheme, equippedMods, CODEX_BONUS, dailySeed, todayStr, offsetDayStr };
   if (typeof window !== 'undefined') window.__cosmic = core;
   if (typeof module !== 'undefined' && module.exports) module.exports = core;
 
@@ -704,6 +724,8 @@
       meta.bestClassic = m.bestClassic | 0;
       meta.bestDailyScore = m.bestDailyScore | 0;
       meta.bestDailyDate = m.bestDailyDate || '';
+      meta.dailyStreak = m.dailyStreak | 0;
+      meta.lastDailyDate = m.lastDailyDate || '';
       if (Array.isArray(m.codex)) {
         m.codex.forEach((v, i) => { if (v && i < TIERS.length) meta.codex[i] = true; });
       }
@@ -842,6 +864,7 @@
   const elGoStats = $('go-stats'), elNextName = $('next-name');
   const elGoDailyBanner = $('go-daily'), elDailyBtn = $('daily-btn');
   const elDailyBadge = $('daily-badge'), elShareBtn = $('share-btn');
+  const elGoStreak = $('go-streak');
   if (elDailyBtn) elDailyBtn.addEventListener('click', () => { world.daily = true; reset(dailySeed()); elOver.classList.add('hidden'); });
   if (elShareBtn) elShareBtn.addEventListener('click', async () => {
     const text = `COSMIC MERGE · Daily ${todayStr()}\nScore: ${world.score.toLocaleString()}\n${location.href.split('?')[0]}`;
@@ -983,8 +1006,17 @@
           elGoStats.innerHTML =
             `<span>${ev.drops || 0} drops</span><span>×${ev.peakCombo || 1} peak combo</span><span>${topName}</span>`;
         }
-        if (elGoEarned) elGoEarned.textContent = '+' + (ev.earned || 0);
+        const totalEarned = (ev.earned || 0) + (ev.streakBonus || 0);
+        if (elGoEarned) elGoEarned.textContent = '+' + totalEarned;
         if (elGoBalance) elGoBalance.textContent = meta.stardust;
+        if (elGoStreak) {
+          if (ev.daily && ev.dailyStreak >= 2) {
+            elGoStreak.textContent = ev.dailyStreak + '-DAY STREAK' + (ev.streakBonus ? '  +' + ev.streakBonus : '');
+            elGoStreak.classList.remove('hidden');
+          } else {
+            elGoStreak.classList.add('hidden');
+          }
+        }
         // daily button: show replay hint if today's challenge was already played
         if (elDailyBtn) {
           if (meta.bestDailyDate === todayStr() && meta.bestDailyScore > 0) {
