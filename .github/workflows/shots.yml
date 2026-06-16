@@ -1,0 +1,40 @@
+name: Screenshots
+
+# Renders the REAL game in headless Chromium and commits the PNGs back, so they
+# can be reviewed (this is how a no-browser session gets "eyes" on the live UI).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shots
+  cancel-in-progress: true
+
+jobs:
+  shoot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm i -D playwright@^1.48
+      - run: npx playwright install --with-deps chromium
+      - run: node tools/shoot.js
+      - name: Commit screenshots
+        run: |
+          git config user.name "cosmic-bot"
+          git config user.email "cosmic-bot@users.noreply.github.com"
+          git add screenshots/
+          if git diff --cached --quiet; then
+            echo "no screenshot changes"
+          else
+            git commit -m "Update screenshots [skip ci]"
+            git pull --rebase --autostash origin main || true
+            git push
+          fi
