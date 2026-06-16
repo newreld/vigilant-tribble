@@ -87,5 +87,17 @@ G.world.over = true; G.world.events.push({ type: 'gameover' });
 try { frame(16); } catch (e) {}
 ok(!window.document.getElementById('gameover').classList.contains('hidden'), 'game-over overlay appears');
 
+// open the Star Chart and unlock an item through the UI
+G.meta.stardust = 5000;
+let threwOnChart = false;
+try {
+  window.document.getElementById('open-chart').dispatchEvent(new window.Event('click'));
+  const buyBtn = window.document.querySelector('#sc-modifier .sc-btn.buy');
+  if (buyBtn) buyBtn.dispatchEvent(new window.Event('click'));
+} catch (e) { threwOnChart = true; console.log('   chart error: ' + e.message); }
+ok(!threwOnChart, 'star chart opens and an unlock click runs without throwing');
+ok(!window.document.getElementById('starchart').classList.contains('hidden'), 'star chart overlay is visible after opening');
+ok(Object.keys(G.meta.unlocked).length >= 1, 'unlocking through the chart UI updates the profile');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -194,6 +194,42 @@ game — exactly the "game with a joke, not a joke" correction.
 - **added a jsdom render test (10 checks)** that boots the full DOM/canvas/loop
   and simulates input — this is the layer that hid the drop-sound bug. All 28
   checks green.
+- **v0.5 — juice + scale + the Supernova.** Tier radii recurved (steep low end
+  for legible size differences; compressed top so the biggest bodies don't choke
+  the field — a merge should make the board *emptier*, not fuller; every radius
+  step stays under √2× so a merge always reclaims area). Merge juice: pop-spring,
+  shockwave ring, pentatonic chime climbing with tier+combo. Added the
+  **Supernova** — an in-run, earned tool (charges from combos, resets every run,
+  nothing saved/bought) that clears small debris. Emoji removed from all UI
+  (SVG speaker, CSS sparkle).
+- **v0.6 — the meta-layer, and a philosophy correction worth recording.**
+  *The mistake:* an earlier session argued against a talent tree / currency as
+  "dark-pattern scaffolding." That was wrong, and it contradicted this very
+  document (see v0.2–v0.3: "currency you're drowning in, earned by playing";
+  "honest long-arc progression"). **Progression is one of the good things to
+  *keep*, not avoid.** The dark pattern was never progression, currency, or a
+  talent tree — it is *coercion toward money* (a shop wearing a game costume).
+  *The sharpened test* (now the standard every feature is held to): **is this
+  here to make the game better, or to manufacture friction?**
+  - *Time as currency* splits two ways: time spent **playing** → XP/unlocks is
+    great; time spent **waiting** (energy refills, build timers) is the trap even
+    when free, because the wait exists only to fragment attention or sell a skip.
+    We use the first, never the second.
+  - *Randomness* splits the same way: fair variety (the Tetris-style next piece)
+    is good; variable-ratio reward you can pay to re-roll (gacha/loot box) is the
+    slot machine. Same mechanic, opposite ethics — the difference is money/coercion.
+
+  *What shipped:* **Stardust** — earned purely from play (sub-linear in score so
+  one huge run can't trivialize the economy), persisted locally. Spent in the
+  **Star Chart**, two deliberately separate branches:
+  1. **Cosmetic** (field themes) — never touches balance, so the score chase
+     stays pure skill.
+  2. **Loadout / modifiers** (Primed Core, Steady Hands) — *opt-in*. Equipping
+     ANY modifier flags the run as `modified`, so it cannot set the fair
+     **Classic** best. Play-to-unlock, never pay-to-win — and the purist's
+     leaderboard record stays clean.
+  Core test suite now 39 checks (economy, unlock/equip gating, modified-run
+  purity, modifier effects); render test 13 (boots the chart UI + an unlock).
 
 ## The open question
 
