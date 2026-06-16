@@ -56,8 +56,26 @@
       <div class="go-label">FINAL SCORE</div>
       <div class="go-final" id="final-score">0</div>
       <div id="new-best" class="hidden">NEW BEST</div>
+      <div class="go-stardust"><span id="go-earned">+0</span> stardust earned</div>
       <button id="restart">PLAY AGAIN</button>
+      <button id="open-chart" type="button">STAR CHART · <span id="go-balance">0</span><i class="dust-mark"></i></button>
       <div class="go-note">Free. Always.</div>
+    </div>
+  </div>
+
+  <!-- star chart: spend stardust earned by playing. A game, not a shop. -->
+  <div id="starchart" class="hidden">
+    <div class="sc-card">
+      <div class="sc-head">
+        <div class="sc-title">STAR CHART</div>
+        <div class="sc-balance"><i class="dust-mark"></i> <span id="sc-balance">0</span> stardust</div>
+        <button id="close-chart" type="button" aria-label="Close">CLOSE</button>
+      </div>
+      <div class="sc-note">Everything here is earned by playing — never bought. Modifiers are opt-in and keep their own score; Classic stays pure.</div>
+      <div class="sc-section">COSMETIC · always balance-safe</div>
+      <div id="sc-cosmetic" class="sc-grid"></div>
+      <div class="sc-section">LOADOUT · opt-in modifiers</div>
+      <div id="sc-modifier" class="sc-grid"></div>
     </div>
   </div>
 

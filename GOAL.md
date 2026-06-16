@@ -27,6 +27,35 @@ Every reward is earnable by play, instantly, for free. The core loop has to be
 fun enough that someone comes back tomorrow *without* the joke — the parody is
 differentiation and marketing, never the reason to keep playing.
 
+### The line we hold (read this before adding any system)
+
+The enemy is **not** progression, currency, randomness, or timers. The enemy is
+turning a game into a **shop** — coercion toward money, friction invented only to
+sell the way around it. "Too good to be true" = keep *all* the good stuff those
+predatory games use (juice, an addictive loop, **and progression — it's a real
+dopamine source**), and simply don't weaponize any of it for money. Think Apple
+Arcade: great games, micro-transactions stripped out; a safe harbor you'd hand a
+kid or a family member.
+
+So the test for any feature is one question: **is this here to make the game
+better, or to manufacture friction?**
+- **Currency / progression / talent trees** capped only by XP & playtime — *good*.
+  In-game currency needn't be "virtual dollars"; anything you collect and choose
+  to spend is fine. (Ours: **Stardust**, earned by play, spent in the Star Chart.)
+- **Time as currency** — time spent *playing* (getting good, putting in hours) is
+  great; time spent *waiting* (energy refills, build timers) is the trap even when
+  free. Use the first, never the second.
+- **Randomness** — fair variety (the next piece) is good; pay-to-re-roll loot
+  boxes / gacha are the slot machine. Same mechanic, opposite ethics.
+- **Paid is allowed, lying is not.** The game may cost money, have paid add-ons,
+  even optional cosmetics — as long as it stays a game, never pressures, never
+  uses "luck" or time-pressure to extract, and the advertising is honest.
+
+Meta-progression follows this: **Stardust** (earned by play) buys either
+balance-safe **cosmetics**, or **opt-in modifiers** — and equipping a modifier
+keeps its own score so the **Classic** record stays a pure, unmodified test of
+skill. Play-to-unlock, never pay-to-win.
+
 ## The concept
 
 A physics **merge game** (the *Suika / watermelon-game* lineage), themed in

@@ -262,6 +262,7 @@
     score: 0, best: 0, over: false,
     overTimer: 0, dropTimer: 0, combo: 0, comboTimer: 0,
     charge: 0, superReady: false, // Supernova: earned by combos, no meta-currency
+    modified: false, graceMult: 1, // set from the equipped loadout at reset()
     rng: mulberry32(Date.now() >>> 0),
     idSeq: 1,
     events: [], // {type, x, y, tier} consumed by the renderer for juice
@@ -291,6 +292,57 @@
     return true;
   }
 
+  // ---- Meta-progression: earned by PLAY, never by money -------------------
+  // Persistent across runs. "Stardust" is earned purely from how you play; you
+  // spend it in the Star Chart. The line we hold: this is a game, not a shop —
+  // every reward is reachable by playing, nothing is sold, gated behind money,
+  // gambled for, or locked behind a wait timer. Two branches, kept separate:
+  //   cosmetic — never affects balance, so the Classic score chase stays pure.
+  //   modifier — opt-in loadout perks. Equipping ANY of them flags a run as
+  //              "modified", so the Classic best stays a fair record of skill.
+  //              It's play-to-unlock, never pay-to-win.
+  const META_ITEMS = [
+    { id: 'theme_aurora', branch: 'cosmetic', name: 'Aurora Field', cost: 250,
+      desc: 'A cool aurora wash over the playfield.', tint: '#1f6f6a' },
+    { id: 'theme_ember',  branch: 'cosmetic', name: 'Ember Field',  cost: 250,
+      desc: 'A warm ember wash over the playfield.', tint: '#7a2f1c' },
+    { id: 'mod_primed',   branch: 'modifier', name: 'Primed Core',  cost: 400,
+      desc: 'Start each run with the Supernova half-charged.' },
+    { id: 'mod_steady',   branch: 'modifier', name: 'Steady Hands', cost: 700,
+      desc: 'A longer grace before the danger line ends a run.' },
+  ];
+  const META_BY_ID = {}; for (const it of META_ITEMS) META_BY_ID[it.id] = it;
+
+  const meta = {
+    stardust: 0,
+    unlocked: {},      // id -> true
+    equipped: {},      // modifier id -> true
+    theme: null,       // selected (unlocked) cosmetic field theme id, or null
+    bestClassic: 0,    // fair, unmodified high score (for an honest leaderboard)
+  };
+  function metaReset() { meta.stardust = 0; meta.unlocked = {}; meta.equipped = {}; meta.theme = null; meta.bestClassic = 0; }
+  // Stardust from a run: scales with score but sub-linearly (sqrt), so a single
+  // huge run can't trivialize the economy and grinding stays meaningful.
+  function stardustForScore(score) { return Math.floor(Math.sqrt(Math.max(0, score)) * 1.5); }
+  function metaUnlock(id) {
+    const item = META_BY_ID[id];
+    if (!item || meta.unlocked[id] || meta.stardust < item.cost) return false;
+    meta.stardust -= item.cost; meta.unlocked[id] = true;
+    if (item.branch === 'cosmetic' && meta.theme === null) meta.theme = id; // auto-wear first
+    return true;
+  }
+  function metaEquip(id, on) {
+    const item = META_BY_ID[id];
+    if (!item || item.branch !== 'modifier' || !meta.unlocked[id]) return false;
+    if (on === false) delete meta.equipped[id]; else meta.equipped[id] = true;
+    return true;
+  }
+  function metaSetTheme(id) {
+    if (id !== null && (!META_BY_ID[id] || META_BY_ID[id].branch !== 'cosmetic' || !meta.unlocked[id])) return false;
+    meta.theme = id; return true;
+  }
+  function equippedMods() { return Object.keys(meta.equipped).filter(id => meta.equipped[id]); }
+
   function pickTier() { return DROP_TIERS[Math.floor(world.rng() * DROP_TIERS.length)]; }
 
   function reset(seed) {
@@ -299,6 +351,12 @@
     world.dropTimer = 0; world.combo = 0; world.comboTimer = 0;
     world.charge = 0; world.superReady = false;
     world.idSeq = 1; world.events = [];
+    // apply the equipped loadout. Equipping any modifier flags the run as
+    // "modified" so it won't set the fair Classic record.
+    world.graceMult = 1;
+    world.modified = equippedMods().length > 0;
+    if (meta.equipped['mod_primed']) world.charge = Math.floor(CHARGE_MAX / 2);
+    if (meta.equipped['mod_steady']) world.graceMult = 1.6;
     if (seed != null) world.rng = mulberry32(seed >>> 0);
     world.next = pickTier();
     spawnCurrent();
@@ -466,9 +524,14 @@
     }
     if (danger) {
       world.overTimer += h;
-      if (world.overTimer >= OVER_GRACE) {
+      if (world.overTimer >= OVER_GRACE * (world.graceMult || 1)) {
         world.over = true;
-        world.events.push({ type: 'gameover' });
+        // cash the run out into stardust; a clean (unmodified) run can set the
+        // fair Classic record.
+        const earned = stardustForScore(world.score);
+        meta.stardust += earned;
+        if (!world.modified && world.score > meta.bestClassic) meta.bestClassic = world.score;
+        world.events.push({ type: 'gameover', earned, modified: world.modified });
       }
     } else {
       world.overTimer = Math.max(0, world.overTimer - h * 2);
@@ -478,7 +541,9 @@
   // expose the headless core for tests
   const core = { world, TIERS, MAX_TIER, POINTS, FIELD_W, FIELD_H, DANGER_Y,
     reset, step, dropCurrent, moveCurrent, spawnCurrent, pickTier, mulberry32,
-    TIER_ART, GLOW_MAX, shadeBody, useSupernova, CHARGE_MAX };
+    TIER_ART, GLOW_MAX, shadeBody, useSupernova, CHARGE_MAX,
+    meta, META_ITEMS, metaReset, stardustForScore, metaUnlock, metaEquip,
+    metaSetTheme, equippedMods };
   if (typeof window !== 'undefined') window.__cosmic = core;
   if (typeof module !== 'undefined' && module.exports) module.exports = core;
 
@@ -495,6 +560,7 @@
   const elCombo = $('combo'), elOver = $('gameover'), elFinal = $('final-score');
   const elNewBest = $('new-best');
   const elNova = $('nova'), elNovaFill = $('nova-fill');
+  const elChart = $('starchart'), elGoEarned = $('go-earned'), elGoBalance = $('go-balance');
 
   // ---- procedural sprite cache (bake shadeBody once per tier) --------------
   // Each tier is rasterized to an offscreen canvas via the shared shader, then
@@ -547,6 +613,21 @@
   try { world.best = parseInt(localStorage.getItem('cosmic.best') || '0', 10) || 0; } catch (e) {}
   let storedBest = world.best;
   const persistBest = () => { if (world.best > storedBest) { storedBest = world.best; try { localStorage.setItem('cosmic.best', String(storedBest)); } catch (e) {} } };
+
+  // ---- meta profile persistence (stardust, unlocks, loadout) ---------------
+  function loadMeta() {
+    try {
+      const raw = localStorage.getItem('cosmic.meta'); if (!raw) return;
+      const m = JSON.parse(raw);
+      meta.stardust = m.stardust | 0;
+      meta.unlocked = m.unlocked || {};
+      meta.equipped = m.equipped || {};
+      meta.theme = m.theme || null;
+      meta.bestClassic = m.bestClassic | 0;
+    } catch (e) {}
+  }
+  const saveMeta = () => { try { localStorage.setItem('cosmic.meta', JSON.stringify(meta)); } catch (e) {} };
+  loadMeta();
 
   // ---- audio --------------------------------------------------------------
   let actx = null;
@@ -659,6 +740,52 @@
   $('restart').addEventListener('click', restart);
   $('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false'); if (!muted) blip(660, 0.1); });
 
+  // ---- Star Chart: spend stardust earned by playing -----------------------
+  const scBalance = $('sc-balance'), scCosmetic = $('sc-cosmetic'), scModifier = $('sc-modifier');
+  function chartItemEl(item) {
+    const owned = !!meta.unlocked[item.id];
+    const el = document.createElement('div');
+    el.className = 'sc-item' + (owned ? ' owned' : '');
+    const main = document.createElement('div'); main.className = 'sc-item-main';
+    const name = document.createElement('div'); name.className = 'sc-item-name'; name.textContent = item.name;
+    const desc = document.createElement('div'); desc.className = 'sc-item-desc'; desc.textContent = item.desc;
+    main.append(name, desc);
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'sc-btn';
+    if (!owned) {
+      const afford = meta.stardust >= item.cost;
+      btn.classList.add(afford ? 'buy' : 'too-poor');
+      btn.textContent = (afford ? 'UNLOCK · ' : '') + item.cost;
+      if (afford) btn.onclick = () => { if (metaUnlock(item.id)) { blip(660, 0.1, 'triangle', 0.15); saveMeta(); renderChart(); } };
+    } else if (item.branch === 'modifier') {
+      const on = !!meta.equipped[item.id];
+      btn.classList.add('toggle'); if (on) btn.classList.add('on');
+      btn.textContent = on ? 'EQUIPPED' : 'EQUIP';
+      btn.onclick = () => { metaEquip(item.id, !on); blip(on ? 330 : 520, 0.08, 'triangle', 0.13); saveMeta(); renderChart(); };
+    } else { // cosmetic
+      const worn = meta.theme === item.id;
+      btn.classList.add('toggle'); if (worn) btn.classList.add('on');
+      btn.textContent = worn ? 'WORN' : 'WEAR';
+      btn.onclick = () => { metaSetTheme(worn ? null : item.id); blip(520, 0.08, 'triangle', 0.13); saveMeta(); renderChart(); };
+    }
+    el.append(main, btn);
+    return el;
+  }
+  function renderChart() {
+    if (!elChart) return;
+    scBalance.textContent = meta.stardust;
+    scCosmetic.innerHTML = ''; scModifier.innerHTML = '';
+    for (const item of META_ITEMS) {
+      (item.branch === 'cosmetic' ? scCosmetic : scModifier).append(chartItemEl(item));
+    }
+  }
+  const openChart = () => { renderChart(); elChart.classList.remove('hidden'); };
+  const closeChart = () => elChart.classList.add('hidden');
+  if (elChart) {
+    $('open-chart').addEventListener('click', openChart);
+    $('close-chart').addEventListener('click', closeChart);
+    elChart.addEventListener('click', e => { if (e.target === elChart) closeChart(); });
+  }
+
   // ---- consume sim events into juice ---------------------------------------
   function drainEvents() {
     for (const ev of world.events) {
@@ -688,6 +815,9 @@
         const isNewBest = world.score > storedBest && world.score > 0;
         persistBest();
         elNewBest.classList.toggle('hidden', !isNewBest);
+        if (elGoEarned) elGoEarned.textContent = '+' + (ev.earned || 0);
+        if (elGoBalance) elGoBalance.textContent = meta.stardust;
+        saveMeta();
         elOver.classList.remove('hidden');
         blip(160, 0.4, 'sawtooth', 0.2);
       }
@@ -726,6 +856,13 @@
       ctx.fillStyle = sideVig; ctx.fillRect(0, 0, FIELD_W, FIELD_H);
     } else {
       ctx.fillStyle = 'rgba(8,6,24,0.55)'; ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+    }
+    // cosmetic field theme — a subtle wash, never alters gameplay (balance-safe)
+    if (meta.theme && META_BY_ID[meta.theme] && META_BY_ID[meta.theme].tint) {
+      ctx.save();
+      ctx.globalAlpha = 0.16; ctx.globalCompositeOperation = 'overlay';
+      ctx.fillStyle = META_BY_ID[meta.theme].tint; ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      ctx.restore();
     }
     // danger line — a subtle glowing threshold, only assertive when threatened
     const danger = world.overTimer > 0.05;

@@ -123,6 +123,47 @@ ok(C.world.score > 0, 'Supernova awards points for cleared debris (got ' + C.wor
 ok(C.world.superReady === false && C.world.charge === 0, 'firing resets the charge meter');
 ok(C.useSupernova() === false, 'cannot fire again until recharged');
 
+// --- 11. Meta-progression: earned by play, never by money ----------------
+C.metaReset();
+ok(C.meta.stardust === 0, 'a fresh profile has zero stardust');
+ok(C.stardustForScore(0) === 0 && C.stardustForScore(10000) > C.stardustForScore(2500),
+   'stardust scales with score, sub-linearly');
+
+// a finished run cashes out into stardust
+C.metaReset(); C.reset(13);
+C.world.bodies = []; C.world.score = 2500; C.world.over = false; C.world.modified = false;
+C.world.overTimer = 999; // force the danger check to trip immediately
+C.world.bodies = [{ id: 990, tier: 5, x: W / 2, y: C.DANGER_Y - 5, vx: 0, vy: 0, age: 1 }];
+for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
+ok(C.world.over && C.meta.stardust > 0, 'finishing a run awards stardust (got ' + C.meta.stardust + ')');
+ok(C.meta.bestClassic === 2500, 'an unmodified run sets the fair Classic best');
+
+// unlock economy: can't afford -> can afford -> deducts, marks unlocked
+C.metaReset();
+ok(C.metaUnlock('mod_primed') === false, 'cannot unlock without enough stardust');
+C.meta.stardust = 1000;
+ok(C.metaUnlock('mod_primed') === true && C.meta.unlocked['mod_primed'] === true, 'unlock succeeds when affordable');
+ok(C.meta.stardust === 600, 'unlocking deducts the cost');
+ok(C.metaUnlock('mod_primed') === false, 'cannot unlock the same item twice');
+
+// modifiers are opt-in, flag the run, and actually change it
+ok(C.metaEquip('mod_steady', true) === false, 'cannot equip a locked modifier');
+ok(C.metaEquip('mod_primed', true) === true, 'can equip an unlocked modifier');
+C.reset(14);
+ok(C.world.modified === true, 'equipping a modifier flags the run as modified');
+ok(C.world.charge > 0, 'Primed Core starts the run with Supernova charge');
+C.world.score = 9999; C.world.over = false; C.world.modified = true;
+C.world.bodies = [{ id: 991, tier: 5, x: W / 2, y: C.DANGER_Y - 5, vx: 0, vy: 0, age: 1 }];
+const classicBefore = C.meta.bestClassic;
+for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
+ok(C.meta.bestClassic === classicBefore, 'a modified run does NOT set the Classic best (no pay-to-win)');
+
+// cosmetics never gate balance; can only wear what you own
+C.metaReset();
+ok(C.metaSetTheme('theme_aurora') === false, 'cannot wear an unowned cosmetic');
+C.meta.stardust = 250;
+ok(C.metaUnlock('theme_aurora') === true && C.meta.theme === 'theme_aurora', 'first cosmetic auto-wears on unlock');
+
 // --- summary -------------------------------------------------------------
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
