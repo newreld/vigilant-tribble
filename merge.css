@@ -67,12 +67,14 @@ body { display: flex; flex-direction: column; }
 .hud-value { font-size: 26px; font-weight: 600; color: var(--marigold); font-variant-numeric: tabular-nums; }
 .stat.secondary .hud-value { font-size: 16px; color: var(--muted); font-weight: 500; }
 
-/* next-piece — framed by the orbital ring motif */
+/* next-piece — framed by the orbital ring motif, with tier name below */
+.next-piece { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .next-ring {
   width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
 #next-canvas { width: 36px; height: 36px; display: block; }
+.next-name { font-size: 7px; letter-spacing: 1px; color: var(--muted); font-family: var(--mono); }
 
 #muteBtn {
   background: none; color: var(--muted); border: 1px solid var(--line);
@@ -150,7 +152,11 @@ body { display: flex; flex-direction: column; }
 #restart:hover { background: #ff954a; }
 #restart:active { transform: translateY(4px); box-shadow: 0 0 0 var(--marigold-dim); }
 .go-note { font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-top: 16px; }
-.go-stardust { font-size: 11px; letter-spacing: 1px; color: var(--teal); margin-top: 14px; }
+.go-stats {
+  display: flex; justify-content: center; gap: 16px; margin-top: 14px;
+  font-size: 9px; letter-spacing: 1.5px; color: var(--muted);
+}
+.go-stardust { font-size: 11px; letter-spacing: 1px; color: var(--teal); margin-top: 10px; }
 .go-stardust #go-earned { font-weight: 600; }
 
 /* a small hand-built sparkle — currency mark, in the spirit of the CSS orbit
@@ -161,6 +167,39 @@ body { display: flex; flex-direction: column; }
   clip-path: polygon(50% 0, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0 50%, 41% 41%);
 }
 
+/* daily HUD badge — small teal pill next to the brand during daily runs */
+#daily-badge {
+  font-family: var(--mono); font-size: 8px; font-weight: 600; letter-spacing: 2px;
+  color: #07120f; background: var(--teal); padding: 2px 7px; border-radius: 4px;
+  vertical-align: middle; margin-left: 6px;
+}
+
+/* share score button — outlined teal, shown above daily-btn during daily runs */
+#share-btn {
+  display: block; margin: 10px auto 0; padding: 11px 28px; border-radius: 9px;
+  font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: 2px; cursor: pointer;
+  color: var(--paper); background: none; border: 1px solid rgba(241,230,208,.3);
+  transition: background .1s, color .1s;
+}
+#share-btn:hover { background: rgba(241,230,208,.1); }
+
+/* daily challenge button — teal outline, between PLAY AGAIN and STAR CHART */
+#daily-btn {
+  display: block; margin: 10px auto 0; padding: 11px 28px; border-radius: 9px;
+  font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: 2px; cursor: pointer;
+  color: var(--teal); background: none; border: 1px solid var(--teal);
+  transition: background .1s, color .1s;
+}
+#daily-btn:hover { background: var(--teal); color: #07120f; }
+.go-daily {
+  margin-top: 10px; font-size: 10px; letter-spacing: 2px;
+  color: var(--teal); font-family: var(--mono);
+}
+.go-streak {
+  margin-top: 6px; font-size: 10px; letter-spacing: 2px;
+  color: var(--marigold); font-family: var(--mono);
+}
+
 /* secondary button — quiet outline, distinct from the marigold PLAY AGAIN */
 #open-chart {
   display: inline-flex; align-items: center; gap: 2px; margin: 12px auto 0;
@@ -169,6 +208,8 @@ body { display: flex; flex-direction: column; }
   color: var(--muted); transition: color .12s, border-color .12s;
 }
 #open-chart:hover { color: var(--paper); border-color: var(--teal); }
+#open-chart.has-unlockable { color: var(--teal); border-color: var(--teal); animation: pulse-teal 1.8s ease-in-out infinite; }
+@keyframes pulse-teal { 0%,100% { box-shadow: 0 0 0 0 rgba(75,179,156,0); } 50% { box-shadow: 0 0 0 4px rgba(75,179,156,0.22); } }
 
 /* star chart — same quiet, solid card language as game over */
 #starchart {
@@ -196,8 +237,15 @@ body { display: flex; flex-direction: column; }
 .sc-item {
   display: flex; align-items: center; gap: 12px;
   border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px;
+  position: relative; overflow: hidden;
+}
+/* cosmetic tint: a faint wash of the theme color in the background */
+.sc-item[style*="--item-tint"]::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: var(--item-tint); opacity: 0.1; border-radius: inherit;
 }
 .sc-item.owned { border-color: rgba(75,179,156,.4); }
+.sc-item.owned[style*="--item-tint"]::before { opacity: 0.18; }
 .sc-item-main { flex: 1; min-width: 0; }
 .sc-item-name { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: .5px; color: var(--paper); }
 .sc-item-desc { font-size: 10px; line-height: 1.4; color: var(--muted); margin-top: 2px; }
@@ -212,5 +260,31 @@ body { display: flex; flex-direction: column; }
 .sc-btn.too-poor { color: var(--muted); border-color: var(--line); cursor: not-allowed; }
 .sc-btn.toggle { border-color: var(--teal); color: var(--teal); }
 .sc-btn.toggle.on { background: var(--teal); color: #07120f; }
+
+/* Codex — compact tier log in the Star Chart */
+.codex-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 2px;
+}
+.codex-tier {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 9px; border-radius: 7px; border: 1px solid var(--line);
+  opacity: 0.35; transition: opacity .15s;
+}
+.codex-tier.found { opacity: 1; border-color: rgba(241,230,208,.18); }
+.codex-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex: none;
+  background: var(--muted); border: 1px solid rgba(241,230,208,.15);
+}
+.codex-tier.found .codex-dot { border: none; }
+.codex-label {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.5px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.codex-tier.found .codex-label { color: var(--paper); }
+.codex-bonus {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.5px;
+  color: var(--teal); margin-left: auto; flex: none; font-variant-numeric: tabular-nums;
+}
+.codex-bonus.earned { color: var(--muted); text-decoration: line-through; font-size: 8px; }
 
 .hidden { display: none !important; }

@@ -15,6 +15,7 @@ C.reset(12345);
 ok(C.world.bodies.length === 0, 'reset clears the field');
 ok(C.world.current && typeof C.world.current.tier === 'number', 'a current piece is spawned');
 ok(typeof C.world.next === 'number', 'a next piece is queued');
+ok(typeof C.world.next2 === 'number', 'a next2 look-ahead piece is queued');
 ok(C.world.score === 0 && C.world.over === false, 'reset zeroes score and clears game-over');
 
 // --- 2. dropping adds a falling body -------------------------------------
@@ -163,6 +164,111 @@ C.metaReset();
 ok(C.metaSetTheme('theme_aurora') === false, 'cannot wear an unowned cosmetic');
 C.meta.stardust = 250;
 ok(C.metaUnlock('theme_aurora') === true && C.meta.theme === 'theme_aurora', 'first cosmetic auto-wears on unlock');
+
+// --- 12. Tier Codex: first-time tier discovery --------------------------
+C.metaReset(); C.reset(16);
+ok(C.meta.codex.every(v => v === false), 'codex starts empty');
+ok(C.meta.codex.length === C.TIERS.length, 'codex has one slot per tier');
+// trigger a merge to tier 1
+C.world.bodies = [
+  { id: 980, tier: 0, x: 170, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+  { id: 981, tier: 0, x: 190, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+];
+C.world.events.length = 0;
+stepN(3);
+const cxEv = C.world.events.find(e => e.type === 'codex_unlock');
+ok(cxEv && cxEv.tier === 1, 'first merge to Comet emits a codex_unlock event');
+ok(C.meta.codex[1] === true, 'codex marks tier 1 (Comet) discovered');
+// second merge to same tier → no duplicate event
+C.world.events.length = 0;
+C.world.bodies = [
+  { id: 982, tier: 0, x: 170, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+  { id: 983, tier: 0, x: 190, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+];
+stepN(3);
+ok(!C.world.events.some(e => e.type === 'codex_unlock' && e.tier === 1),
+   'no codex_unlock event when tier is already discovered');
+
+// codex bonus: higher tiers award one-time stardust
+ok(C.CODEX_BONUS[4] === 25 && C.CODEX_BONUS[8] === 500, 'CODEX_BONUS values defined correctly');
+C.metaReset(); C.reset(17);
+const sdBefore = C.meta.stardust;
+C.world.bodies = [
+  { id: 984, tier: 3, x: 170, y: Hf - T[3].r, vx: 0, vy: 0, age: 1 },
+  { id: 985, tier: 3, x: 210, y: Hf - T[3].r, vx: 0, vy: 0, age: 1 },
+];
+C.world.events.length = 0;
+stepN(3);
+const cxBonusEv = C.world.events.find(e => e.type === 'codex_unlock' && e.tier === 4);
+ok(cxBonusEv && cxBonusEv.bonus === 25, 'codex_unlock event for Ringed carries the bonus amount');
+ok(C.meta.stardust === sdBefore + 25, 'first Ringed Planet discovery awards +25 stardust immediately');
+
+// --- 13. Score milestones: per-run celebrations --------------------------
+C.reset(18);
+C.world.score = 999; C.world.events.length = 0;
+// simulate a merge that pushes score past 1000
+C.world.bodies = [
+  { id: 986, tier: 0, x: 170, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+  { id: 987, tier: 0, x: 190, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+];
+stepN(3);
+const msEv = C.world.events.find(e => e.type === 'milestone');
+ok(msEv && msEv.label === 'KILO-MERGE', '1000-point milestone fires KILO-MERGE event');
+// crossing the same threshold again does not re-fire
+const msCount = C.world.events.filter(e => e.type === 'milestone').length;
+C.world.events.length = 0;
+C.world.bodies = [
+  { id: 988, tier: 0, x: 170, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+  { id: 989, tier: 0, x: 190, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+];
+stepN(3);
+ok(!C.world.events.some(e => e.type === 'milestone' && e.label === 'KILO-MERGE'),
+   'milestone does not fire again once already passed this run');
+// milestones reset on a new run
+C.reset(19);
+ok(C.world.milestoneAt === 0, 'milestoneAt resets to 0 on reset');
+
+// --- 14. Daily challenge: same seed every day, no loadout modifiers -----
+ok(typeof C.dailySeed === 'function', 'dailySeed() is exported');
+const ds1 = C.dailySeed(), ds2 = C.dailySeed();
+ok(ds1 === ds2, 'dailySeed() returns the same value twice in the same day');
+ok(typeof C.todayStr() === 'string' && C.todayStr().length === 10, 'todayStr() returns YYYY-MM-DD');
+
+// daily run: no modifiers even if mod_primed is equipped
+C.metaReset(); C.meta.stardust = 1000; C.metaUnlock('mod_primed'); C.metaEquip('mod_primed', true);
+C.world.daily = true; C.reset(C.dailySeed());
+ok(C.world.modified === false, 'daily run is never flagged as modified');
+ok(C.world.charge === 0, 'mod_primed has no effect in a daily run');
+
+// daily best tracking
+C.metaReset(); C.world.daily = true; C.reset(20);
+C.world.score = 5000; C.world.over = false; C.world.overTimer = 999;
+C.world.bodies = [{ id: 999, tier: 5, x: C.FIELD_W / 2, y: C.DANGER_Y - 5, vx: 0, vy: 0, age: 1 }];
+for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
+ok(C.world.over && C.meta.bestDailyScore === 5000, 'daily run sets bestDailyScore (got ' + C.meta.bestDailyScore + ')');
+ok(C.meta.bestDailyDate === C.todayStr(), 'bestDailyDate matches today');
+
+// streak tracking
+C.metaReset(); C.world.daily = true; C.reset(20);
+C.world.score = 500; C.world.over = false; C.world.overTimer = 999;
+C.world.bodies = [{ id: 1000, tier: 3, x: C.FIELD_W / 2, y: C.DANGER_Y - 5, vx: 0, vy: 0, age: 1 }];
+for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
+ok(C.meta.dailyStreak === 1, 'first daily sets streak to 1');
+ok(C.meta.lastDailyDate === C.todayStr(), 'lastDailyDate set to today');
+// replay today: streak stays 1, lastDailyDate stays today
+C.world.daily = true; C.reset(20);
+C.world.score = 600; C.world.over = false; C.world.overTimer = 999;
+C.world.bodies = [{ id: 1001, tier: 3, x: C.FIELD_W / 2, y: C.DANGER_Y - 5, vx: 0, vy: 0, age: 1 }];
+for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
+ok(C.meta.dailyStreak === 1, 'replaying today does not increment streak');
+// simulate yesterday play by setting lastDailyDate to yesterday
+C.meta.lastDailyDate = C.offsetDayStr(-1);
+C.meta.dailyStreak = 3;
+C.world.daily = true; C.reset(20);
+C.world.score = 700; C.world.over = false; C.world.overTimer = 999;
+C.world.bodies = [{ id: 1002, tier: 3, x: C.FIELD_W / 2, y: C.DANGER_Y - 5, vx: 0, vy: 0, age: 1 }];
+for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
+ok(C.meta.dailyStreak === 4, 'streak increments when previous play was yesterday (got ' + C.meta.dailyStreak + ')');
 
 // --- summary -------------------------------------------------------------
 console.log(`\n${pass} passed, ${fail} failed`);

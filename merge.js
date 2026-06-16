@@ -245,6 +245,24 @@
   const DROP_COOLDOWN = 0.35;  // s between drops
   const OVER_GRACE = 1.3;      // s a body may sit above the danger line
   const DROP_TIERS = [0, 0, 0, 0, 1, 1, 1, 2, 2, 3]; // weighted spawn pool
+  const SCORE_MILESTONES = [[1000,'KILO-MERGE'],[5000,'MEGA-MERGE'],[10000,'GIGA-MERGE'],[25000,'TERA-MERGE'],[50000,'PETA-MERGE'],[100000,'EXA-MERGE']];
+
+  // Daily seed: deterministic from YYYY-MM-DD so every player gets the same run today.
+  function dailySeed() {
+    const d = new Date();
+    const n = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    const m = mulberry32(n * 1664525 + 1013904223);
+    m(); m(); // warm up
+    return (m() * 0x100000000) >>> 0;
+  }
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function offsetDayStr(offset) {
+    const d = new Date(); d.setDate(d.getDate() + offset);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
 
   // ---- seedable RNG (deterministic for tests) -----------------------------
   function mulberry32(a) {
@@ -258,7 +276,7 @@
 
   // ---- world --------------------------------------------------------------
   const world = {
-    bodies: [], current: null, next: null,
+    bodies: [], current: null, next: null, next2: null,
     score: 0, best: 0, over: false,
     overTimer: 0, dropTimer: 0, combo: 0, comboTimer: 0,
     charge: 0, superReady: false, // Supernova: earned by combos, no meta-currency
@@ -266,6 +284,10 @@
     rng: mulberry32(Date.now() >>> 0),
     idSeq: 1,
     events: [], // {type, x, y, tier} consumed by the renderer for juice
+    milestoneAt: 0, // highest score milestone already announced this run
+    // run stats: tracked per session, shown on game-over, reset on reset()
+    drops: 0, peakCombo: 0, topTier: 0,
+    daily: false, // true for a daily-challenge run (no loadout modifiers)
   };
 
   // ---- Supernova: an in-run, earned tool — NOT meta-progression ------------
@@ -302,16 +324,28 @@
   //              "modified", so the Classic best stays a fair record of skill.
   //              It's play-to-unlock, never pay-to-win.
   const META_ITEMS = [
-    { id: 'theme_aurora', branch: 'cosmetic', name: 'Aurora Field', cost: 250,
+    { id: 'theme_aurora',  branch: 'cosmetic', name: 'Aurora Field',  cost: 250,
       desc: 'A cool aurora wash over the playfield.', tint: '#1f6f6a' },
-    { id: 'theme_ember',  branch: 'cosmetic', name: 'Ember Field',  cost: 250,
+    { id: 'theme_ember',   branch: 'cosmetic', name: 'Ember Field',   cost: 250,
       desc: 'A warm ember wash over the playfield.', tint: '#7a2f1c' },
-    { id: 'mod_primed',   branch: 'modifier', name: 'Primed Core',  cost: 400,
+    { id: 'theme_eclipse', branch: 'cosmetic', name: 'Eclipse Field', cost: 350,
+      desc: 'Indigo haze — the deep end of the spectrum.', tint: '#2d1b4e' },
+    { id: 'theme_forge',   branch: 'cosmetic', name: 'Forge Field',   cost: 350,
+      desc: 'Volcanic amber — heat bloom at the edge of a star.', tint: '#6a2e0e' },
+    { id: 'mod_primed',    branch: 'modifier', name: 'Primed Core',   cost: 400,
       desc: 'Start each run with the Supernova half-charged.' },
-    { id: 'mod_steady',   branch: 'modifier', name: 'Steady Hands', cost: 700,
+    { id: 'mod_steady',    branch: 'modifier', name: 'Steady Hands',  cost: 700,
       desc: 'A longer grace before the danger line ends a run.' },
+    { id: 'mod_guide',     branch: 'modifier', name: 'Guide Star',    cost: 600,
+      desc: 'Shows a landing ring — where your piece will come to rest.' },
+    { id: 'mod_doublenext', branch: 'modifier', name: 'Deep Scan',    cost: 900,
+      desc: 'See two pieces ahead instead of one — plan further, chain deeper.' },
   ];
   const META_BY_ID = {}; for (const it of META_ITEMS) META_BY_ID[it.id] = it;
+
+  // one-time stardust bonus for first-ever discovery of each tier (index = tier).
+  // Tiers 0-3 are made constantly and give no bonus; the bigger the tier, the bigger the reward.
+  const CODEX_BONUS = [0, 0, 0, 0, 25, 50, 100, 250, 500];
 
   const meta = {
     stardust: 0,
@@ -319,8 +353,19 @@
     equipped: {},      // modifier id -> true
     theme: null,       // selected (unlocked) cosmetic field theme id, or null
     bestClassic: 0,    // fair, unmodified high score (for an honest leaderboard)
+    codex: new Array(TIERS.length).fill(false), // which tiers have been created by merge (ever)
+    bestDailyScore: 0, // personal best on today's daily seed
+    bestDailyDate: '', // 'YYYY-MM-DD' of the day the daily best was set
+    dailyStreak: 0,    // consecutive days with at least one daily run
+    lastDailyDate: '', // 'YYYY-MM-DD' of most recent daily play (any score)
   };
-  function metaReset() { meta.stardust = 0; meta.unlocked = {}; meta.equipped = {}; meta.theme = null; meta.bestClassic = 0; }
+  function metaReset() {
+    meta.stardust = 0; meta.unlocked = {}; meta.equipped = {};
+    meta.theme = null; meta.bestClassic = 0;
+    meta.codex = new Array(TIERS.length).fill(false);
+    meta.bestDailyScore = 0; meta.bestDailyDate = '';
+    meta.dailyStreak = 0; meta.lastDailyDate = '';
+  }
   // Stardust from a run: scales with score but sub-linearly (sqrt), so a single
   // huge run can't trivialize the economy and grinding stays meaningful.
   function stardustForScore(score) { return Math.floor(Math.sqrt(Math.max(0, score)) * 1.5); }
@@ -350,21 +395,28 @@
     world.score = 0; world.over = false; world.overTimer = 0;
     world.dropTimer = 0; world.combo = 0; world.comboTimer = 0;
     world.charge = 0; world.superReady = false;
-    world.idSeq = 1; world.events = [];
-    // apply the equipped loadout. Equipping any modifier flags the run as
-    // "modified" so it won't set the fair Classic record.
+    world.idSeq = 1; world.events = []; world.milestoneAt = 0;
+    world.drops = 0; world.peakCombo = 0; world.topTier = 0;
+    // daily runs are pure (no loadout modifiers) for a fair daily comparison.
+    // Classic runs get the full equipped loadout (modified flag when active).
     world.graceMult = 1;
-    world.modified = equippedMods().length > 0;
-    if (meta.equipped['mod_primed']) world.charge = Math.floor(CHARGE_MAX / 2);
-    if (meta.equipped['mod_steady']) world.graceMult = 1.6;
+    if (!world.daily) {
+      world.modified = equippedMods().length > 0;
+      if (meta.equipped['mod_primed']) world.charge = Math.floor(CHARGE_MAX / 2);
+      if (meta.equipped['mod_steady']) world.graceMult = 1.6;
+    } else {
+      world.modified = false;
+    }
     if (seed != null) world.rng = mulberry32(seed >>> 0);
     world.next = pickTier();
+    world.next2 = pickTier();
     spawnCurrent();
   }
 
   function spawnCurrent() {
     world.current = { tier: world.next, x: FIELD_W / 2 };
-    world.next = pickTier();
+    world.next = world.next2;
+    world.next2 = pickTier();
   }
 
   function moveCurrent(x) {
@@ -383,6 +435,7 @@
     });
     world.current = null;
     world.dropTimer = DROP_COOLDOWN;
+    world.drops++;
     return true;
   }
 
@@ -467,19 +520,21 @@
         vx: (a.vx + c.vx) / 2, vy: (a.vy + c.vy) / 2, age: 0 };
       // remove the two, add the new
       world.bodies = world.bodies.filter(b => b !== a && b !== c);
-      if (nt >= MAX_TIER) {
-        // two black holes already exist? a NEW black hole is the max tier;
-        // merging TWO black holes triggers the BIG BANG.
-        world.bodies.push(nb);
-        world.events.push({ type: 'merge', x: nx, y: ny, tier: nt, id: nb.id });
-      } else {
-        world.bodies.push(nb);
-        world.events.push({ type: 'merge', x: nx, y: ny, tier: nt, id: nb.id });
+      world.bodies.push(nb);
+      world.events.push({ type: 'merge', x: nx, y: ny, tier: nt, id: nb.id });
+      if (nt > world.topTier) world.topTier = nt;
+      // first time this tier has been created by merge → codex discovery + one-time bonus
+      if (!meta.codex[nt]) {
+        meta.codex[nt] = true;
+        const bonus = CODEX_BONUS[nt] || 0;
+        if (bonus) meta.stardust += bonus; // instant bonus; persisted by saveMeta in the handler
+        world.events.push({ type: 'codex_unlock', tier: nt, x: nx, y: ny, bonus });
       }
       merged++;
     }
     if (merged > 0) {
       world.combo += merged; world.comboTimer = 1.1;
+      if (world.combo > world.peakCombo) world.peakCombo = world.combo;
       addCharge(merged + Math.max(0, world.combo - 1)); // chains charge faster
       const mult = 1 + (world.combo - 1) * 0.5;
       // score the new tiers created
@@ -490,6 +545,13 @@
         }
       }
       if (world.score > world.best) world.best = world.score;
+      // score milestone celebrations (per-run, non-persistent)
+      for (const [threshold, label] of SCORE_MILESTONES) {
+        if (world.score >= threshold && world.milestoneAt < threshold) {
+          world.milestoneAt = threshold;
+          world.events.push({ type: 'milestone', label, x: FIELD_W / 2, y: FIELD_H * 0.32 });
+        }
+      }
     }
 
     // BIG BANG: if two black holes (max tier) touch, detonate.
@@ -526,12 +588,33 @@
       world.overTimer += h;
       if (world.overTimer >= OVER_GRACE * (world.graceMult || 1)) {
         world.over = true;
-        // cash the run out into stardust; a clean (unmodified) run can set the
-        // fair Classic record.
         const earned = stardustForScore(world.score);
         meta.stardust += earned;
         if (!world.modified && world.score > meta.bestClassic) meta.bestClassic = world.score;
-        world.events.push({ type: 'gameover', earned, modified: world.modified });
+        let isNewDailyBest = false, dailyStreak = 0, streakBonus = 0;
+        if (world.daily) {
+          const today = todayStr();
+          if (today !== meta.bestDailyDate || world.score > meta.bestDailyScore) {
+            isNewDailyBest = true;
+            meta.bestDailyScore = world.score; meta.bestDailyDate = today;
+          }
+          // streak: increment only once per new day
+          if (meta.lastDailyDate !== today) {
+            const yesterday = offsetDayStr(-1);
+            if (meta.lastDailyDate === yesterday) {
+              meta.dailyStreak++;
+            } else {
+              meta.dailyStreak = 1; // first daily, or streak broken
+            }
+            meta.lastDailyDate = today;
+            streakBonus = meta.dailyStreak * 5; // +5 stardust per streak day
+            meta.stardust += streakBonus;
+          }
+          dailyStreak = meta.dailyStreak;
+        }
+        world.events.push({ type: 'gameover', earned, modified: world.modified,
+          drops: world.drops, peakCombo: world.peakCombo, topTier: world.topTier,
+          daily: world.daily, isNewDailyBest, dailyStreak, streakBonus });
       }
     } else {
       world.overTimer = Math.max(0, world.overTimer - h * 2);
@@ -543,7 +626,7 @@
     reset, step, dropCurrent, moveCurrent, spawnCurrent, pickTier, mulberry32,
     TIER_ART, GLOW_MAX, shadeBody, useSupernova, CHARGE_MAX,
     meta, META_ITEMS, metaReset, stardustForScore, metaUnlock, metaEquip,
-    metaSetTheme, equippedMods };
+    metaSetTheme, equippedMods, CODEX_BONUS, dailySeed, todayStr, offsetDayStr };
   if (typeof window !== 'undefined') window.__cosmic = core;
   if (typeof module !== 'undefined' && module.exports) module.exports = core;
 
@@ -600,13 +683,29 @@
 
   // next-piece preview (mini sprite in the HUD)
   const nctx = (elNext && elNext.getContext) ? elNext.getContext('2d') : null;
-  let nextShown = -1, novaShown = null;
+  let nextShown = -1, nextShown2 = -1, novaShown = null;
+  let currentSpawnedAt = 0, prevCurrentRef = null; // spawn slide-in animation
   function drawNext() {
     if (!nctx) return;
     const w = elNext.width, h = elNext.height;
     nctx.clearRect(0, 0, w, h);
-    const sp = sprite(world.next);
-    if (sp && sp.cv) { const sz = Math.min(w, h) * 0.96; nctx.drawImage(sp.cv, (w - sz) / 2, (h - sz) / 2, sz, sz); }
+    const doubleNext = !world.daily && !!meta.equipped['mod_doublenext'] && world.next2 !== null;
+    if (doubleNext) {
+      // left: current next at ~60%, right: next2 at ~38% (dimmer, further ahead)
+      const sp1 = sprite(world.next), sp2 = sprite(world.next2);
+      const sz1 = Math.min(w, h) * 0.62, sz2 = Math.min(w, h) * 0.38;
+      if (sp1 && sp1.cv) nctx.drawImage(sp1.cv, 0, (h - sz1) / 2, sz1, sz1);
+      if (sp2 && sp2.cv) {
+        nctx.globalAlpha = 0.55;
+        nctx.drawImage(sp2.cv, w - sz2 - 1, (h - sz2) / 2 + 4, sz2, sz2);
+        nctx.globalAlpha = 1;
+      }
+      if (elNextName) elNextName.textContent = TIERS[world.next].name + ' · ' + TIERS[world.next2].name;
+    } else {
+      const sp = sprite(world.next);
+      if (sp && sp.cv) { const sz = Math.min(w, h) * 0.96; nctx.drawImage(sp.cv, (w - sz) / 2, (h - sz) / 2, sz, sz); }
+      if (elNextName) elNextName.textContent = TIERS[world.next].name;
+    }
   }
 
   let muted = false;
@@ -624,14 +723,22 @@
       meta.equipped = m.equipped || {};
       meta.theme = m.theme || null;
       meta.bestClassic = m.bestClassic | 0;
+      meta.bestDailyScore = m.bestDailyScore | 0;
+      meta.bestDailyDate = m.bestDailyDate || '';
+      meta.dailyStreak = m.dailyStreak | 0;
+      meta.lastDailyDate = m.lastDailyDate || '';
+      if (Array.isArray(m.codex)) {
+        m.codex.forEach((v, i) => { if (v && i < TIERS.length) meta.codex[i] = true; });
+      }
     } catch (e) {}
   }
   const saveMeta = () => { try { localStorage.setItem('cosmic.meta', JSON.stringify(meta)); } catch (e) {} };
   loadMeta();
 
-  // ---- audio --------------------------------------------------------------
+  // ---- audio + haptics ----------------------------------------------------
   let actx = null;
   const audio = () => { if (muted) return null; if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } } return actx; };
+  const haptic = (pat = 4) => { try { navigator.vibrate && navigator.vibrate(pat); } catch (_) {} };
   function blip(freq, dur = 0.08, type = 'sine', gain = 0.16) {
     const a = audio(); if (!a) return;
     const o = a.createOscillator(), g = a.createGain();
@@ -661,7 +768,9 @@
   }
 
   // ---- juice: particles, shake, floaters, shockwave rings, body pops -------
-  let parts = [], shake = 0, floaters = [], rings = [];
+  let parts = [], shake = 0, floaters = [], rings = [], bangFlash = 0, comboFlash = 0;
+  let prevDanger = false; // for danger-onset audio cue
+  let scoreCountUp = null; // { to, start, dur } — animates the final-score display
   const popById = new Map(); // body id -> pop start time (performance.now)
   function burst(x, y, n, color) {
     for (let i = 0; i < n; i++) {
@@ -674,6 +783,13 @@
   }
   function floatScore(x, y, text, color) { floaters.push({ x, y, text, color, life: 1 }); }
   function shockwave(x, y, maxR, color) { rings.push({ x, y, maxR, color, life: 1 }); }
+  function dropDust(x) {
+    for (let i = 0; i < 7; i++) {
+      const ang = Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.55;
+      const spd = 1.2 + Math.random() * 2.8;
+      parts.push({ x, y: SPAWN_Y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, life: 0.55, size: 1 + Math.random() * 2, color: 'rgba(241,230,208,0.75)' });
+    }
+  }
   // easeOutBack — overshoots past 1 then settles back; the "pop" of a new body
   function popScale(id) {
     const t0 = popById.get(id); if (t0 === undefined) return 1;
@@ -723,29 +839,52 @@
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
     if (world.over || !world.current) return;
     moveCurrent(toField(e.clientX));
-    if (dropCurrent()) blip(220, 0.05, 'square', 0.12);
+    const dx = world.current ? world.current.x : null;
+    const dt = world.current ? world.current.tier : 0;
+    if (dropCurrent()) { blip(380 - dt * 28, 0.05, 'square', 0.11); if (dx !== null) dropDust(dx); }
   });
   canvas.addEventListener('pointercancel', () => { aiming = false; });
   window.addEventListener('keydown', e => {
     if (!world.current) return;
     if (e.key === 'ArrowLeft') moveCurrent(world.current.x - 18);
     else if (e.key === 'ArrowRight') moveCurrent(world.current.x + 18);
-    else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); dropCurrent(); }
+    else if (e.key === ' ' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const dx = world.current ? world.current.x : null;
+      const dt = world.current ? world.current.tier : 0;
+      if (dropCurrent() && dx !== null) { blip(380 - dt * 28, 0.05, 'square', 0.11); dropDust(dx); }
+    }
   });
   // Supernova: fire with the meter (tap) or the 'S' key when charged.
   function fireSupernova() { if (useSupernova()) blip(120, 0.15, 'sawtooth', 0.2); }
   if (elNova) elNova.addEventListener('click', fireSupernova);
   window.addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') fireSupernova(); });
-  const restart = () => { reset(); elOver.classList.add('hidden'); };
-  $('restart').addEventListener('click', restart);
+  $('restart').addEventListener('click', () => { world.daily = false; reset(); elOver.classList.add('hidden'); });
   $('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false'); if (!muted) blip(660, 0.1); });
 
   // ---- Star Chart: spend stardust earned by playing -----------------------
-  const scBalance = $('sc-balance'), scCosmetic = $('sc-cosmetic'), scModifier = $('sc-modifier');
+  const scBalance = $('sc-balance'), scCosmetic = $('sc-cosmetic'), scModifier = $('sc-modifier'), scCodex = $('sc-codex');
+  const elGoStats = $('go-stats'), elNextName = $('next-name');
+  const elGoDailyBanner = $('go-daily'), elDailyBtn = $('daily-btn');
+  const elDailyBadge = $('daily-badge'), elShareBtn = $('share-btn');
+  const elGoStreak = $('go-streak');
+  if (elDailyBtn) elDailyBtn.addEventListener('click', () => { world.daily = true; reset(dailySeed()); elOver.classList.add('hidden'); });
+  if (elShareBtn) elShareBtn.addEventListener('click', async () => {
+    const text = `COSMIC MERGE · Daily ${todayStr()}\nScore: ${world.score.toLocaleString()}\n${location.href.split('?')[0]}`;
+    try {
+      if (navigator.share) { await navigator.share({ text }); }
+      else {
+        await navigator.clipboard.writeText(text);
+        elShareBtn.textContent = 'COPIED!';
+        setTimeout(() => { elShareBtn.textContent = 'SHARE SCORE'; }, 1800);
+      }
+    } catch (_) {}
+  });
   function chartItemEl(item) {
     const owned = !!meta.unlocked[item.id];
     const el = document.createElement('div');
     el.className = 'sc-item' + (owned ? ' owned' : '');
+    if (item.branch === 'cosmetic' && item.tint) el.style.setProperty('--item-tint', item.tint);
     const main = document.createElement('div'); main.className = 'sc-item-main';
     const name = document.createElement('div'); name.className = 'sc-item-name'; name.textContent = item.name;
     const desc = document.createElement('div'); desc.className = 'sc-item-desc'; desc.textContent = item.desc;
@@ -770,6 +909,30 @@
     el.append(main, btn);
     return el;
   }
+  function renderCodex() {
+    if (!scCodex) return;
+    scCodex.innerHTML = '';
+    for (let t = 0; t < TIERS.length; t++) {
+      const found = t === 0 || !!meta.codex[t]; // tier 0 (Asteroid) always found — you drop them
+      const bonus = CODEX_BONUS[t] || 0;
+      const el = document.createElement('div');
+      el.className = 'codex-tier' + (found ? ' found' : '');
+      const dot = document.createElement('span');
+      dot.className = 'codex-dot';
+      if (found) dot.style.background = TIER_ART[t].accent;
+      const lbl = document.createElement('span');
+      lbl.className = 'codex-label';
+      lbl.textContent = TIERS[t].name;
+      el.append(dot, lbl);
+      if (bonus) {
+        const bon = document.createElement('span');
+        bon.className = 'codex-bonus' + (found ? ' earned' : '');
+        bon.textContent = (found ? '' : '+') + bonus;
+        el.append(bon);
+      }
+      scCodex.append(el);
+    }
+  }
   function renderChart() {
     if (!elChart) return;
     scBalance.textContent = meta.stardust;
@@ -777,6 +940,7 @@
     for (const item of META_ITEMS) {
       (item.branch === 'cosmetic' ? scCosmetic : scModifier).append(chartItemEl(item));
     }
+    renderCodex();
   }
   const openChart = () => { renderChart(); elChart.classList.remove('hidden'); };
   const closeChart = () => elChart.classList.add('hidden');
@@ -798,11 +962,17 @@
         const mult = 1 + (world.combo - 1) * 0.5;
         floatScore(ev.x, ev.y, '+' + Math.round(POINTS[ev.tier] * mult), '#f1e6d0');
         mergeSound(ev.tier, world.combo);
-        if (world.combo > 1) floatScore(ev.x, ev.y - 22, 'COMBO x' + world.combo, '#ffe066');
+        haptic(ev.tier < 4 ? 3 : 6); // brief buzz — stronger for higher tiers
+        if (world.combo > 1) {
+          floatScore(ev.x, ev.y - 22, 'COMBO x' + world.combo, '#ffe066');
+          comboFlash = Math.min(comboFlash + 0.28, 0.9);
+        }
       } else if (ev.type === 'bigbang') {
-        for (let i = 0; i < 10; i++) setTimeout(() => burst(FIELD_W * Math.random(), FIELD_H * Math.random(), 40, '#fff'), i * 40);
-        shake = 26; floatScore(FIELD_W / 2, FIELD_H / 2, 'BIG BANG  +' + ev.bonus, '#ff8ad0');
-        [262, 330, 392, 523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.2, 'triangle', 0.2), i * 90));
+        bangFlash = 1; shake = 26;
+        haptic([30, 15, 30, 15, 60]); // BIG BANG rhythm
+        for (let i = 0; i < 14; i++) setTimeout(() => burst(FIELD_W * Math.random(), FIELD_H * Math.random(), 48, '#fff'), i * 30);
+        setTimeout(() => floatScore(FIELD_W / 2, FIELD_H / 2, 'BIG BANG  +' + ev.bonus, '#ff8ad0'), 300);
+        [196, 262, 330, 392, 523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.22, 'triangle', 0.22), i * 80));
       } else if (ev.type === 'supernova') {
         // a shockwave from the top sweeping the field; debris flares out
         shake = Math.min(shake + 16, 26);
@@ -810,16 +980,64 @@
         for (let i = 0; i < 18; i++) burst(FIELD_W * Math.random(), FIELD_H * (0.2 + 0.7 * Math.random()), 22, '#f0883e');
         if (ev.cleared > 0) floatScore(FIELD_W / 2, FIELD_H / 2, 'SUPERNOVA  +' + ev.cleared * 30, '#ffd9a0');
         [392, 523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.18, 'triangle', 0.16), i * 70));
+      } else if (ev.type === 'milestone') {
+        shake = Math.min(shake + 6, 18);
+        floatScore(ev.x, ev.y, ev.label + '!', '#f1e6d0');
+        [523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.14, 'triangle', 0.14), i * 65));
+      } else if (ev.type === 'codex_unlock') {
+        const bonusStr = ev.bonus ? '  +' + ev.bonus : '';
+        floatScore(ev.x, ev.y - 28, 'FIRST  ' + TIERS[ev.tier].name.toUpperCase() + '!' + bonusStr, '#4bb39c');
+        [392, 523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.15, 'triangle', 0.18), i * 80));
+        saveMeta(); // persist the discovery + bonus immediately, even mid-run
       } else if (ev.type === 'gameover') {
-        elFinal.textContent = world.score;
+        elFinal.textContent = '0';
+        scoreCountUp = { to: world.score, start: performance.now(), dur: Math.min(1400, 400 + world.score / 40) };
         const isNewBest = world.score > storedBest && world.score > 0;
         persistBest();
-        elNewBest.classList.toggle('hidden', !isNewBest);
-        if (elGoEarned) elGoEarned.textContent = '+' + (ev.earned || 0);
+        elNewBest.classList.toggle('hidden', !isNewBest || ev.daily);
+        if (elShareBtn) elShareBtn.classList.toggle('hidden', !ev.daily);
+        if (elGoDailyBanner) {
+          if (ev.daily) {
+            elGoDailyBanner.classList.remove('hidden');
+            elGoDailyBanner.textContent = ev.isNewDailyBest ? 'NEW DAILY BEST' : 'DAILY BEST · ' + meta.bestDailyScore;
+          } else {
+            elGoDailyBanner.classList.add('hidden');
+          }
+        }
+        if (elGoStats) {
+          const topName = ev.topTier > 0 ? TIERS[ev.topTier].name : '—';
+          elGoStats.innerHTML =
+            `<span>${ev.drops || 0} drops</span><span>×${ev.peakCombo || 1} peak combo</span><span>${topName}</span>`;
+        }
+        const totalEarned = (ev.earned || 0) + (ev.streakBonus || 0);
+        if (elGoEarned) elGoEarned.textContent = '+' + totalEarned;
         if (elGoBalance) elGoBalance.textContent = meta.stardust;
+        if (elGoStreak) {
+          if (ev.daily && ev.dailyStreak >= 2) {
+            elGoStreak.textContent = ev.dailyStreak + '-DAY STREAK' + (ev.streakBonus ? '  +' + ev.streakBonus : '');
+            elGoStreak.classList.remove('hidden');
+          } else {
+            elGoStreak.classList.add('hidden');
+          }
+        }
+        // daily button: show replay hint if today's challenge was already played
+        if (elDailyBtn) {
+          if (meta.bestDailyDate === todayStr() && meta.bestDailyScore > 0) {
+            elDailyBtn.textContent = 'REPLAY DAILY · ' + meta.bestDailyScore.toLocaleString();
+          } else {
+            elDailyBtn.textContent = 'DAILY CHALLENGE';
+          }
+        }
+        // star chart button: highlight when new items are affordable
+        const elOpenChart = $('open-chart');
+        if (elOpenChart) {
+          const hasNew = META_ITEMS.some(i => !meta.unlocked[i.id] && meta.stardust >= i.cost);
+          elOpenChart.classList.toggle('has-unlockable', hasNew);
+        }
         saveMeta();
         elOver.classList.remove('hidden');
         blip(160, 0.4, 'sawtooth', 0.2);
+        haptic([20, 10, 40]); // game-over pulse
       }
     }
     world.events.length = 0;
@@ -866,6 +1084,8 @@
     }
     // danger line — a subtle glowing threshold, only assertive when threatened
     const danger = world.overTimer > 0.05;
+    if (danger && !prevDanger) blip(55, 0.25, 'sine', 0.07); // low warning thud on onset
+    prevDanger = danger;
     ctx.save();
     ctx.strokeStyle = danger ? 'rgba(210,74,44,0.9)' : 'rgba(180,150,120,0.24)';
     ctx.lineWidth = danger ? 2.5 : 1.5; ctx.setLineDash([7, 9]);
@@ -873,7 +1093,33 @@
     ctx.beginPath(); ctx.moveTo(0, DANGER_Y); ctx.lineTo(FIELD_W, DANGER_Y); ctx.stroke();
     ctx.restore();
     ctx.setLineDash([]);
+    // danger vignette — red edge bleed builds up as the grace timer ticks
+    if (danger) {
+      try {
+        const frac = Math.min(world.overTimer / (OVER_GRACE * (world.graceMult || 1)), 1);
+        const dv = ctx.createRadialGradient(FIELD_W / 2, FIELD_H, FIELD_W * 0.28, FIELD_W / 2, FIELD_H, FIELD_W * 0.9);
+        dv.addColorStop(0, 'rgba(0,0,0,0)');
+        dv.addColorStop(1, `rgba(210,74,44,${(frac * 0.22).toFixed(3)})`);
+        ctx.fillStyle = dv; ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      } catch (_) {}
+    }
 
+    // combo flash — warm marigold bloom that builds with cascade chains
+    if (comboFlash > 0) {
+      ctx.fillStyle = `rgba(240,136,62,${(comboFlash * 0.09).toFixed(3)})`;
+      ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      comboFlash = Math.max(0, comboFlash - 0.04);
+    }
+
+    // falling trail: accent sparkles behind freshly-dropped bodies
+    for (const b of world.bodies) {
+      if (b.age < 0.28 && b.vy > 90 && Math.random() < 0.35) {
+        const r = TIERS[b.tier].r;
+        parts.push({ x: b.x + (Math.random() - 0.5) * r * 0.5, y: b.y - r * 0.2,
+          vx: (Math.random() - 0.5) * 0.6, vy: -0.4 - Math.random() * 1.2,
+          life: 0.38, size: 1 + Math.random() * 1.8, color: TIER_ART[b.tier].accent });
+      }
+    }
     for (const b of world.bodies) drawBody(b.x, b.y, b.tier, false, b.id);
 
     // shockwave rings — quick expanding pulse at each merge point
@@ -887,10 +1133,41 @@
     }
     ctx.globalAlpha = 1;
     if (world.current && !world.over) {
-      drawBody(world.current.x, SPAWN_Y, world.current.tier, true);
+      // detect piece spawn to start the slide-in animation
+      if (world.current !== prevCurrentRef) { prevCurrentRef = world.current; currentSpawnedAt = performance.now(); }
+      const spawnAge = performance.now() - currentSpawnedAt;
+      const spawnDur = 180; // ms for slide-in
+      const spawnOff = spawnAge < spawnDur ? -28 * (1 - spawnAge / spawnDur) : 0; // slide from above
+      const ghostY = SPAWN_Y + spawnOff;
+
+      // landing ring (mod_guide modifier) — approximate where the piece will rest
+      if (meta.equipped['mod_guide']) {
+        const cr = TIERS[world.current.tier].r, cx = world.current.x;
+        let landY = FIELD_H - cr;
+        for (const b of world.bodies) {
+          const br = TIERS[b.tier].r;
+          if (Math.abs(b.x - cx) < cr + br) { const top = b.y - br - cr; if (top < landY) landY = top; }
+        }
+        ctx.globalAlpha = 0.4; ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+        ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
+        ctx.beginPath(); ctx.arc(cx, landY, cr, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]); ctx.globalAlpha = 1;
+      }
+      drawBody(world.current.x, ghostY, world.current.tier, true);
       ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4, 6]);
-      ctx.beginPath(); ctx.moveTo(world.current.x, SPAWN_Y); ctx.lineTo(world.current.x, FIELD_H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(world.current.x, ghostY); ctx.lineTo(world.current.x, FIELD_H); ctx.stroke();
       ctx.setLineDash([]);
+    }
+
+    // first-drop hint — vanishes the moment the player drops their first piece
+    if (world.drops === 0 && !world.over) {
+      const pulse = 0.5 + 0.4 * Math.sin(performance.now() / 520);
+      ctx.globalAlpha = pulse * 0.72;
+      ctx.fillStyle = '#f1e6d0';
+      ctx.font = '500 10px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('TAP TO DROP', FIELD_W / 2, SPAWN_Y + 36);
+      ctx.globalAlpha = 1;
     }
 
     // particles
@@ -907,18 +1184,36 @@
       const f = floaters[i]; f.y -= 0.6; f.life -= 0.02;
       if (f.life <= 0) { floaters.splice(i, 1); continue; }
       ctx.globalAlpha = Math.max(0, f.life); ctx.fillStyle = f.color || '#fff';
-      ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center';
+      ctx.font = '700 22px "Big Shoulders Display", "Arial Narrow", sans-serif';
+      ctx.textAlign = 'center';
       ctx.fillText(f.text, f.x, f.y);
     }
     ctx.globalAlpha = 1;
+
+    // BIG BANG white flash — a blinding wash that fades to reveal the cleared field
+    if (bangFlash > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${(bangFlash * 0.9).toFixed(3)})`;
+      ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      bangFlash = Math.max(0, bangFlash - 0.045);
+    }
+
     ctx.restore();
 
     shake *= 0.85; if (shake < 0.3) shake = 0;
 
+    // score count-up animation on game-over card
+    if (scoreCountUp) {
+      const t = Math.min(1, (performance.now() - scoreCountUp.start) / scoreCountUp.dur);
+      const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      elFinal.textContent = Math.round(scoreCountUp.to * ease).toLocaleString();
+      if (t >= 1) { elFinal.textContent = scoreCountUp.to.toLocaleString(); scoreCountUp = null; }
+    }
+
     // HUD
     elScore.textContent = world.score;
     elBest.textContent = world.best;
-    if (world.next !== nextShown) { drawNext(); nextShown = world.next; }
+    if (elDailyBadge) elDailyBadge.classList.toggle('hidden', !world.daily);
+    if (world.next !== nextShown || world.next2 !== nextShown2) { drawNext(); nextShown = world.next; nextShown2 = world.next2; }
     elCombo.textContent = world.combo > 1 ? 'COMBO ×' + world.combo : '';
     if (elNova) {
       elNovaFill.style.width = Math.min(100, world.charge / CHARGE_MAX * 100) + '%';
