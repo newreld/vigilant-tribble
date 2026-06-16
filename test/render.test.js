@@ -35,7 +35,7 @@ const lsStub = {
 };
 Object.defineProperty(window, 'localStorage', { value: lsStub, configurable: true });
 global.localStorage = lsStub;
-window.AudioContext = class { createOscillator() { return { connect() {}, start() {}, stop() {}, frequency: {}, type: '' }; }
+window.AudioContext = class { createOscillator() { return { connect() {}, start() {}, stop() {}, frequency: { value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, type: '' }; }
   createGain() { return { connect() {}, gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} } }; }
   get currentTime() { return 0; } get destination() { return {}; } };
 

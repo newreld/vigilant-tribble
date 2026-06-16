@@ -387,10 +387,10 @@
         // two black holes already exist? a NEW black hole is the max tier;
         // merging TWO black holes triggers the BIG BANG.
         world.bodies.push(nb);
-        world.events.push({ type: 'merge', x: nx, y: ny, tier: nt });
+        world.events.push({ type: 'merge', x: nx, y: ny, tier: nt, id: nb.id });
       } else {
         world.bodies.push(nb);
-        world.events.push({ type: 'merge', x: nx, y: ny, tier: nt });
+        world.events.push({ type: 'merge', x: nx, y: ny, tier: nt, id: nb.id });
       }
       merged++;
     }
@@ -531,17 +531,49 @@
     g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
     o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + dur);
   }
+  // Merge "pop": a quick pitch-up chime on a pleasant scale, climbing with tier
+  // and combo — the ascending chain is what makes a merge feel satisfying.
+  const _SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21]; // major pentatonic-ish
+  function mergeSound(tier, combo) {
+    const a = audio(); if (!a) return;
+    const t0 = a.currentTime;
+    const semis = _SCALE[Math.min(tier, _SCALE.length - 1)] + (combo - 1) * 2;
+    const base = 196 * Math.pow(2, semis / 12);
+    for (const [mult, type, gain] of [[1, 'sine', 0.22], [2.01, 'triangle', 0.07]]) {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(base * mult * 0.86, t0);
+      o.frequency.exponentialRampToValueAtTime(base * mult, t0 + 0.05); // the "pop" glide
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain, t0 + 0.008);            // fast attack
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.20);          // quick decay
+      o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + 0.22);
+    }
+  }
 
-  // ---- juice: particles, shake, floaters ----------------------------------
-  let parts = [], shake = 0, floaters = [];
+  // ---- juice: particles, shake, floaters, shockwave rings, body pops -------
+  let parts = [], shake = 0, floaters = [], rings = [];
+  const popById = new Map(); // body id -> pop start time (performance.now)
   function burst(x, y, n, color) {
     for (let i = 0; i < n; i++) {
-      const ang = Math.random() * Math.PI * 2, spd = 1 + Math.random() * 5;
-      parts.push({ x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, life: 1, size: 2 + Math.random() * 4, color });
+      const ang = Math.random() * Math.PI * 2, spd = 1 + Math.random() * 5.5;
+      // most sparks take the body's accent color; a few bright cream ones add sparkle
+      const c = Math.random() < 0.25 ? '#f1e6d0' : color;
+      parts.push({ x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, life: 1, size: 2 + Math.random() * 4, color: c });
     }
     if (parts.length > 500) parts = parts.slice(-500);
   }
   function floatScore(x, y, text, color) { floaters.push({ x, y, text, color, life: 1 }); }
+  function shockwave(x, y, maxR, color) { rings.push({ x, y, maxR, color, life: 1 }); }
+  // easeOutBack — overshoots past 1 then settles back; the "pop" of a new body
+  function popScale(id) {
+    const t0 = popById.get(id); if (t0 === undefined) return 1;
+    const e = (performance.now() - t0) / 240; // 240ms pop
+    if (e >= 1) { popById.delete(id); return 1; }
+    const c1 = 1.70158, c3 = c1 + 1;
+    const back = 1 + c3 * Math.pow(e - 1, 3) + c1 * Math.pow(e - 1, 2);
+    return 0.55 + 0.45 * back; // 0.55 -> overshoot ~1.07 -> 1.0
+  }
 
   // ---- layout / responsive scale ------------------------------------------
   let scale = 1, offX = 0, offY = 0;
@@ -599,11 +631,14 @@
   function drainEvents() {
     for (const ev of world.events) {
       if (ev.type === 'merge') {
-        burst(ev.x, ev.y, 8 + ev.tier * 4, TIER_ART[ev.tier].accent);
+        const accent = TIER_ART[ev.tier].accent;
+        burst(ev.x, ev.y, 10 + ev.tier * 4, accent);
+        shockwave(ev.x, ev.y, TIERS[ev.tier].r * 2.2, accent);
+        if (ev.id !== undefined) popById.set(ev.id, performance.now());
         shake = Math.min(shake + 2 + ev.tier, 18);
         const mult = 1 + (world.combo - 1) * 0.5;
-        floatScore(ev.x, ev.y, '+' + Math.round(POINTS[ev.tier] * mult), '#fff');
-        blip(200 + ev.tier * 70, 0.1, 'sine', 0.18);
+        floatScore(ev.x, ev.y, '+' + Math.round(POINTS[ev.tier] * mult), '#f1e6d0');
+        mergeSound(ev.tier, world.combo);
         if (world.combo > 1) floatScore(ev.x, ev.y - 22, 'COMBO x' + world.combo, '#ffe066');
       } else if (ev.type === 'bigbang') {
         for (let i = 0; i < 10; i++) setTimeout(() => burst(FIELD_W * Math.random(), FIELD_H * Math.random(), 40, '#fff'), i * 40);
@@ -622,13 +657,14 @@
   }
 
   // ---- render -------------------------------------------------------------
-  function drawBody(x, y, tier, ghost) {
+  function drawBody(x, y, tier, ghost, popId) {
     const sp = sprite(tier);
     ctx.save();
     ctx.globalAlpha = ghost ? 0.42 : 1;
+    const ps = popId !== undefined ? popScale(popId) : 1;
     if (sp && sp.cv) {
-      const sz = sp.half * 2;
-      ctx.drawImage(sp.cv, x - sp.half, y - sp.half, sz, sz);
+      const sz = sp.half * 2 * ps;
+      ctx.drawImage(sp.cv, x - sp.half * ps, y - sp.half * ps, sz, sz);
     } else {
       // fallback disc (headless/no-ImageData environments)
       const r = TIERS[tier].r;
@@ -662,7 +698,18 @@
     ctx.restore();
     ctx.setLineDash([]);
 
-    for (const b of world.bodies) drawBody(b.x, b.y, b.tier, false);
+    for (const b of world.bodies) drawBody(b.x, b.y, b.tier, false, b.id);
+
+    // shockwave rings — quick expanding pulse at each merge point
+    for (let i = rings.length - 1; i >= 0; i--) {
+      const r = rings[i]; r.life -= 0.06;
+      if (r.life <= 0) { rings.splice(i, 1); continue; }
+      const e = 1 - r.life;
+      ctx.globalAlpha = r.life * 0.6;
+      ctx.strokeStyle = r.color; ctx.lineWidth = 2.5 * r.life;
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.maxR * e, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
     if (world.current && !world.over) {
       drawBody(world.current.x, SPAWN_Y, world.current.tier, true);
       ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4, 6]);
