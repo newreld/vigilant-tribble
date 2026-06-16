@@ -726,7 +726,7 @@
   }
 
   // ---- juice: particles, shake, floaters, shockwave rings, body pops -------
-  let parts = [], shake = 0, floaters = [], rings = [], bangFlash = 0;
+  let parts = [], shake = 0, floaters = [], rings = [], bangFlash = 0, comboFlash = 0;
   const popById = new Map(); // body id -> pop start time (performance.now)
   function burst(x, y, n, color) {
     for (let i = 0; i < n; i++) {
@@ -739,6 +739,13 @@
   }
   function floatScore(x, y, text, color) { floaters.push({ x, y, text, color, life: 1 }); }
   function shockwave(x, y, maxR, color) { rings.push({ x, y, maxR, color, life: 1 }); }
+  function dropDust(x) {
+    for (let i = 0; i < 7; i++) {
+      const ang = Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.55;
+      const spd = 1.2 + Math.random() * 2.8;
+      parts.push({ x, y: SPAWN_Y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, life: 0.55, size: 1 + Math.random() * 2, color: 'rgba(241,230,208,0.75)' });
+    }
+  }
   // easeOutBack — overshoots past 1 then settles back; the "pop" of a new body
   function popScale(id) {
     const t0 = popById.get(id); if (t0 === undefined) return 1;
@@ -788,14 +795,19 @@
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
     if (world.over || !world.current) return;
     moveCurrent(toField(e.clientX));
-    if (dropCurrent()) blip(220, 0.05, 'square', 0.12);
+    const dx = world.current ? world.current.x : null;
+    if (dropCurrent()) { blip(220, 0.05, 'square', 0.12); if (dx !== null) dropDust(dx); }
   });
   canvas.addEventListener('pointercancel', () => { aiming = false; });
   window.addEventListener('keydown', e => {
     if (!world.current) return;
     if (e.key === 'ArrowLeft') moveCurrent(world.current.x - 18);
     else if (e.key === 'ArrowRight') moveCurrent(world.current.x + 18);
-    else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); dropCurrent(); }
+    else if (e.key === ' ' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const dx = world.current ? world.current.x : null;
+      if (dropCurrent() && dx !== null) dropDust(dx);
+    }
   });
   // Supernova: fire with the meter (tap) or the 'S' key when charged.
   function fireSupernova() { if (useSupernova()) blip(120, 0.15, 'sawtooth', 0.2); }
@@ -808,7 +820,19 @@
   const scBalance = $('sc-balance'), scCosmetic = $('sc-cosmetic'), scModifier = $('sc-modifier'), scCodex = $('sc-codex');
   const elGoStats = $('go-stats'), elNextName = $('next-name');
   const elGoDailyBanner = $('go-daily'), elDailyBtn = $('daily-btn');
+  const elDailyBadge = $('daily-badge'), elShareBtn = $('share-btn');
   if (elDailyBtn) elDailyBtn.addEventListener('click', () => { world.daily = true; reset(dailySeed()); elOver.classList.add('hidden'); });
+  if (elShareBtn) elShareBtn.addEventListener('click', async () => {
+    const text = `COSMIC MERGE · Daily ${todayStr()}\nScore: ${world.score.toLocaleString()}\n${location.href.split('?')[0]}`;
+    try {
+      if (navigator.share) { await navigator.share({ text }); }
+      else {
+        await navigator.clipboard.writeText(text);
+        elShareBtn.textContent = 'COPIED!';
+        setTimeout(() => { elShareBtn.textContent = 'SHARE SCORE'; }, 1800);
+      }
+    } catch (_) {}
+  });
   function chartItemEl(item) {
     const owned = !!meta.unlocked[item.id];
     const el = document.createElement('div');
@@ -890,7 +914,10 @@
         const mult = 1 + (world.combo - 1) * 0.5;
         floatScore(ev.x, ev.y, '+' + Math.round(POINTS[ev.tier] * mult), '#f1e6d0');
         mergeSound(ev.tier, world.combo);
-        if (world.combo > 1) floatScore(ev.x, ev.y - 22, 'COMBO x' + world.combo, '#ffe066');
+        if (world.combo > 1) {
+          floatScore(ev.x, ev.y - 22, 'COMBO x' + world.combo, '#ffe066');
+          comboFlash = Math.min(comboFlash + 0.28, 0.9);
+        }
       } else if (ev.type === 'bigbang') {
         bangFlash = 1; shake = 26;
         for (let i = 0; i < 14; i++) setTimeout(() => burst(FIELD_W * Math.random(), FIELD_H * Math.random(), 48, '#fff'), i * 30);
@@ -917,6 +944,7 @@
         const isNewBest = world.score > storedBest && world.score > 0;
         persistBest();
         elNewBest.classList.toggle('hidden', !isNewBest || ev.daily);
+        if (elShareBtn) elShareBtn.classList.toggle('hidden', !ev.daily);
         if (elGoDailyBanner) {
           if (ev.daily) {
             elGoDailyBanner.classList.remove('hidden');
@@ -999,6 +1027,13 @@
       } catch (_) {}
     }
 
+    // combo flash — warm marigold bloom that builds with cascade chains
+    if (comboFlash > 0) {
+      ctx.fillStyle = `rgba(240,136,62,${(comboFlash * 0.09).toFixed(3)})`;
+      ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      comboFlash = Math.max(0, comboFlash - 0.04);
+    }
+
     for (const b of world.bodies) drawBody(b.x, b.y, b.tier, false, b.id);
 
     // shockwave rings — quick expanding pulse at each merge point
@@ -1029,6 +1064,17 @@
       ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4, 6]);
       ctx.beginPath(); ctx.moveTo(world.current.x, SPAWN_Y); ctx.lineTo(world.current.x, FIELD_H); ctx.stroke();
       ctx.setLineDash([]);
+    }
+
+    // first-drop hint — vanishes the moment the player drops their first piece
+    if (world.drops === 0 && !world.over) {
+      const pulse = 0.5 + 0.4 * Math.sin(performance.now() / 520);
+      ctx.globalAlpha = pulse * 0.72;
+      ctx.fillStyle = '#f1e6d0';
+      ctx.font = '500 10px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('TAP TO DROP', FIELD_W / 2, SPAWN_Y + 36);
+      ctx.globalAlpha = 1;
     }
 
     // particles
@@ -1065,6 +1111,7 @@
     // HUD
     elScore.textContent = world.score;
     elBest.textContent = world.best;
+    if (elDailyBadge) elDailyBadge.classList.toggle('hidden', !world.daily);
     if (world.next !== nextShown) { drawNext(); nextShown = world.next; }
     elCombo.textContent = world.combo > 1 ? 'COMBO ×' + world.combo : '';
     if (elNova) {

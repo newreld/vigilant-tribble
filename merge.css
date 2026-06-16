@@ -167,6 +167,22 @@ body { display: flex; flex-direction: column; }
   clip-path: polygon(50% 0, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0 50%, 41% 41%);
 }
 
+/* daily HUD badge — small teal pill next to the brand during daily runs */
+#daily-badge {
+  font-family: var(--mono); font-size: 8px; font-weight: 600; letter-spacing: 2px;
+  color: #07120f; background: var(--teal); padding: 2px 7px; border-radius: 4px;
+  vertical-align: middle; margin-left: 6px;
+}
+
+/* share score button — outlined teal, shown above daily-btn during daily runs */
+#share-btn {
+  display: block; margin: 10px auto 0; padding: 11px 28px; border-radius: 9px;
+  font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: 2px; cursor: pointer;
+  color: var(--paper); background: none; border: 1px solid rgba(241,230,208,.3);
+  transition: background .1s, color .1s;
+}
+#share-btn:hover { background: rgba(241,230,208,.1); }
+
 /* daily challenge button — teal outline, between PLAY AGAIN and STAR CHART */
 #daily-btn {
   display: block; margin: 10px auto 0; padding: 11px 28px; border-radius: 9px;
