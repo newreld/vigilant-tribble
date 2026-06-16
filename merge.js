@@ -1248,7 +1248,7 @@
   resize();
   buildFieldGfx();
   for (let t = 0; t < TIERS.length; t++) sprite(t); // pre-bake so first frames are instant
+  reset();     // must run before drawNext so world.next is not null
   drawNext();
-  reset();
   requestAnimationFrame(loop);
 })();
