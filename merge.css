@@ -5,9 +5,9 @@
 :root {
   --ink: #0c080f;
   --ink2: #171019;
-  --paper: #f1e6d0;       /* warm cream text */
-  --muted: #9b8d7e;       /* warm gray */
-  --line: rgba(241,230,208,.16);
+  --paper: #faf1de;       /* warm cream text */
+  --muted: #c2b29c;       /* warm gray — brightened for legibility */
+  --line: rgba(241,230,208,.22);
   --marigold: #f0883e;    /* primary accent */
   --marigold-dim: #c9692a;
   --teal: #4bb39c;        /* secondary accent */
@@ -19,7 +19,7 @@
 html, body {
   height: 100%; overflow: hidden; user-select: none; touch-action: manipulation;
   font-family: var(--mono); color: var(--paper);
-  background: radial-gradient(140% 100% at 50% -18%, #271a2c 0%, #150e1a 50%, var(--ink) 100%);
+  background: radial-gradient(140% 100% at 50% -18%, #3a2942 0%, #221629 50%, #100a16 100%);
 }
 body { display: flex; flex-direction: column; }
 
@@ -36,7 +36,7 @@ body { display: flex; flex-direction: column; }
     radial-gradient(1.5px 1.5px at 90% 82%, rgba(240,136,62,.7), transparent),
     radial-gradient(1px 1px at 28% 8%, #fff, transparent),
     radial-gradient(1px 1px at 72% 70%, rgba(241,230,208,.7), transparent);
-  opacity: .7;
+  opacity: .9;
 }
 
 /* grain — de-digitizes the flat gradients */

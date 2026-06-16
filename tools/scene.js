@@ -32,10 +32,10 @@ const mix = (u, v, t) => [u[0] + (v[0] - u[0]) * t, u[1] + (v[1] - u[1]) * t, u[
 
 // field gradient + side vignette (matches merge.js buildFieldGfx intent)
 for (let y = 0; y < Hh; y++) {
-  const t = y / Hh, top = [26, 24, 60], midc = [13, 11, 34], bot = [5, 4, 17];
+  const t = y / Hh, top = [54, 39, 64], midc = [36, 25, 46], bot = [22, 15, 30];
   const c = t < 0.55 ? mix(top, midc, t / 0.55) : mix(midc, bot, (t - 0.55) / 0.45);
   for (let x = 0; x < W; x++) {
-    const dx = (x / W - 0.5), vig = 1 - Math.min(1, (dx * dx) * 3.0) * 0.5;
+    const dx = (x / W - 0.5), vig = 1 - Math.min(1, (dx * dx) * 3.0) * 0.28;
     const i = (y * W + x) * 3; fb[i] = c[0] * vig; fb[i + 1] = c[1] * vig; fb[i + 2] = c[2] * vig;
   }
 }

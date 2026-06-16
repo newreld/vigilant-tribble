@@ -92,7 +92,7 @@
     let col = [0, 0, 0], al = 0;
 
     if (d <= 1.0) {
-      const limb = 0.80 + 0.20 * (1 - d); // flat limb darkening — no sphere normals
+      const limb = 0.90 + 0.10 * (1 - d); // gentle limb darkening — keeps bodies bright/legible
 
       if (tier === 0) {
         // ASTEROID — sandy ochre, etching-hatch texture, stippled craters
@@ -675,10 +675,10 @@
   function buildFieldGfx() {
     try {
       const g = ctx.createLinearGradient(0, 0, 0, FIELD_H);
-      g.addColorStop(0, 'rgba(38,26,44,0.5)'); g.addColorStop(0.55, 'rgba(20,13,24,0.5)'); g.addColorStop(1, 'rgba(8,5,12,0.62)');
+      g.addColorStop(0, 'rgba(64,46,74,0.62)'); g.addColorStop(0.55, 'rgba(40,28,50,0.58)'); g.addColorStop(1, 'rgba(22,15,30,0.66)');
       fieldGrad = g;
-      const v = ctx.createRadialGradient(FIELD_W / 2, FIELD_H * 0.42, FIELD_W * 0.18, FIELD_W / 2, FIELD_H * 0.5, FIELD_W * 0.82);
-      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.42)');
+      const v = ctx.createRadialGradient(FIELD_W / 2, FIELD_H * 0.42, FIELD_W * 0.22, FIELD_W / 2, FIELD_H * 0.5, FIELD_W * 0.9);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.24)');
       sideVig = v;
     } catch (e) { fieldGrad = null; sideVig = null; }
   }
