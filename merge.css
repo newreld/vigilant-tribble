@@ -17,11 +17,20 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
 html, body {
-  height: 100%; overflow: hidden; user-select: none; touch-action: manipulation;
+  height: 100%; overflow: hidden; overscroll-behavior: none;
+  user-select: none; touch-action: manipulation;
   font-family: var(--mono); color: var(--paper);
-  background: radial-gradient(140% 100% at 50% -18%, #3a2942 0%, #221629 50%, #100a16 100%);
+  background-color: var(--ink);
+  background-image: radial-gradient(140% 100% at 50% -18%, #3a2942 0%, #221629 50%, #100a16 100%);
 }
-body { display: flex; flex-direction: column; }
+/* paint the gradient under the iOS status bar / home-indicator safe areas
+   too, so they read as part of the scene instead of a stray white bar */
+html { height: 100dvh; }
+body {
+  display: flex; flex-direction: column;
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
 
 /* starfield — varied sizes + a few palette-tinted stars (not an even scatter) */
 #stars {
@@ -47,40 +56,44 @@ body { display: flex; flex-direction: column; }
 }
 
 /* HUD — asymmetric: identity hard-left, data clustered right */
+/* every HUD dimension below is a clamp(min, fluid, design-max) so the whole
+   bar scales down together on narrow phones instead of overflowing —
+   the max is the original fixed size, untouched on wider screens. */
 #hud {
   position: relative; z-index: 2;
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 12px 16px 4px;
+  gap: clamp(6px, 2vw, 12px); padding: 12px clamp(10px, 4vw, 16px) 4px;
 }
 .brand {
-  font-family: var(--display); font-weight: 800; font-size: 24px;
+  font-family: var(--display); font-weight: 800; font-size: clamp(15px, 4.8vw, 24px);
   letter-spacing: .5px; line-height: .9; color: var(--paper);
-  display: flex; align-items: center; gap: 9px;
+  display: flex; align-items: center; gap: clamp(5px, 1.8vw, 9px);
+  min-width: 0;
 }
 /* orbital-ring motif */
-.orbit { width: 15px; height: 15px; border: 1.5px solid var(--marigold); border-radius: 50%; position: relative; flex: none; }
+.orbit { width: clamp(11px, 3vw, 15px); height: clamp(11px, 3vw, 15px); border: 1.5px solid var(--marigold); border-radius: 50%; position: relative; flex: none; }
 .orbit::after { content: ""; position: absolute; width: 4px; height: 4px; background: var(--teal); border-radius: 50%; top: -2px; left: 50%; }
 
-.hud-stats { display: flex; align-items: center; gap: 16px; }
+.hud-stats { display: flex; align-items: center; gap: clamp(8px, 2.5vw, 16px); flex: none; }
 .stat { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
 .hud-label { font-size: 8px; letter-spacing: 2.5px; color: var(--muted); margin-bottom: 3px; }
-.hud-value { font-size: 26px; font-weight: 600; color: var(--marigold); font-variant-numeric: tabular-nums; }
-.stat.secondary .hud-value { font-size: 16px; color: var(--muted); font-weight: 500; }
+.hud-value { font-size: clamp(19px, 6.2vw, 30px); font-weight: 600; color: var(--marigold); font-variant-numeric: tabular-nums; }
+.stat.secondary .hud-value { font-size: clamp(12px, 3.5vw, 16px); color: var(--muted); font-weight: 500; }
 
 /* next-piece — framed by the orbital ring motif, with tier name below */
-.next-piece { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.next-piece { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: none; }
 .next-ring {
-  width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%;
+  width: clamp(34px, 9vw, 44px); height: clamp(34px, 9vw, 44px); border: 1px solid var(--line); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
-#next-canvas { width: 36px; height: 36px; display: block; }
+#next-canvas { width: clamp(28px, 7.5vw, 36px); height: clamp(28px, 7.5vw, 36px); display: block; }
 .next-name { font-size: 7px; letter-spacing: 1px; color: var(--muted); font-family: var(--mono); }
 
 #muteBtn {
   background: none; color: var(--muted); border: 1px solid var(--line);
-  border-radius: 8px; width: 36px; height: 36px; cursor: pointer;
+  border-radius: 8px; width: clamp(30px, 8vw, 36px); height: clamp(30px, 8vw, 36px); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: color .12s, border-color .12s;
+  transition: color .12s, border-color .12s; flex: none;
 }
 #muteBtn:hover { color: var(--paper); border-color: var(--marigold); }
 #muteBtn .slash { display: none; }
