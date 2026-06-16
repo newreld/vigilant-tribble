@@ -22,10 +22,10 @@
     { name: 'Moon',       emoji: '🌑', r: 21,  color: '#cfd2d6' },
     { name: 'Planet',     emoji: '🌍', r: 27,  color: '#4aa3ff' },
     { name: 'Ringed',     emoji: '🪐', r: 35,  color: '#e0b86b' },
-    { name: 'Dwarf Star', emoji: '⭐', r: 45,  color: '#ffe066' },
-    { name: 'Star',       emoji: '☀️', r: 58,  color: '#ff9f40' },
-    { name: 'Galaxy',     emoji: '🌌', r: 74,  color: '#b56cff' },
-    { name: 'Black Hole', emoji: '⚫', r: 94,  color: '#1a1030' },
+    { name: 'Dwarf Star', emoji: '⭐', r: 44,  color: '#ffe066' },
+    { name: 'Star',       emoji: '☀️', r: 54,  color: '#ff9f40' },
+    { name: 'Galaxy',     emoji: '🌌', r: 65,  color: '#b56cff' },
+    { name: 'Black Hole', emoji: '⚫', r: 77,  color: '#1a1030' },
   ];
   const MAX_TIER = TIERS.length - 1;
   // triangular-ish scoring: bigger merges are worth disproportionately more
@@ -261,10 +261,35 @@
     bodies: [], current: null, next: null,
     score: 0, best: 0, over: false,
     overTimer: 0, dropTimer: 0, combo: 0, comboTimer: 0,
+    charge: 0, superReady: false, // Supernova: earned by combos, no meta-currency
     rng: mulberry32(Date.now() >>> 0),
     idSeq: 1,
     events: [], // {type, x, y, tier} consumed by the renderer for juice
   };
+
+  // ---- Supernova: an in-run, earned tool — NOT meta-progression ------------
+  // It charges purely from combos within a run and resets every run; nothing is
+  // saved, bought, or gated behind money. When ready, the player fires it to
+  // vaporize the small debris (Asteroids + Comets) that clutters the field —
+  // serving the core fantasy: a good merge/clear makes the field emptier.
+  const CHARGE_MAX = 18;
+  function addCharge(n) {
+    if (world.superReady) return;          // don't overfill a ready meter
+    world.charge = Math.min(CHARGE_MAX, world.charge + n);
+    if (world.charge >= CHARGE_MAX) world.superReady = true;
+  }
+  function useSupernova() {
+    if (!world.superReady || world.over) return false;
+    const before = world.bodies.length;
+    world.bodies = world.bodies.filter(b => b.tier > 1); // blast Asteroids+Comets
+    const cleared = before - world.bodies.length;
+    world.score += cleared * 30;
+    if (world.score > world.best) world.best = world.score;
+    world.charge = 0; world.superReady = false;
+    world.overTimer = 0; // a clear relieves the danger line
+    world.events.push({ type: 'supernova', cleared });
+    return true;
+  }
 
   function pickTier() { return DROP_TIERS[Math.floor(world.rng() * DROP_TIERS.length)]; }
 
@@ -272,6 +297,7 @@
     world.bodies = [];
     world.score = 0; world.over = false; world.overTimer = 0;
     world.dropTimer = 0; world.combo = 0; world.comboTimer = 0;
+    world.charge = 0; world.superReady = false;
     world.idSeq = 1; world.events = [];
     if (seed != null) world.rng = mulberry32(seed >>> 0);
     world.next = pickTier();
@@ -396,6 +422,7 @@
     }
     if (merged > 0) {
       world.combo += merged; world.comboTimer = 1.1;
+      addCharge(merged + Math.max(0, world.combo - 1)); // chains charge faster
       const mult = 1 + (world.combo - 1) * 0.5;
       // score the new tiers created
       for (const ev of world.events) {
@@ -451,7 +478,7 @@
   // expose the headless core for tests
   const core = { world, TIERS, MAX_TIER, POINTS, FIELD_W, FIELD_H, DANGER_Y,
     reset, step, dropCurrent, moveCurrent, spawnCurrent, pickTier, mulberry32,
-    TIER_ART, GLOW_MAX, shadeBody };
+    TIER_ART, GLOW_MAX, shadeBody, useSupernova, CHARGE_MAX };
   if (typeof window !== 'undefined') window.__cosmic = core;
   if (typeof module !== 'undefined' && module.exports) module.exports = core;
 
@@ -467,6 +494,7 @@
   const elScore = $('score'), elBest = $('best'), elNext = $('next-canvas');
   const elCombo = $('combo'), elOver = $('gameover'), elFinal = $('final-score');
   const elNewBest = $('new-best');
+  const elNova = $('nova'), elNovaFill = $('nova-fill');
 
   // ---- procedural sprite cache (bake shadeBody once per tier) --------------
   // Each tier is rasterized to an offscreen canvas via the shared shader, then
@@ -506,7 +534,7 @@
 
   // next-piece preview (mini sprite in the HUD)
   const nctx = (elNext && elNext.getContext) ? elNext.getContext('2d') : null;
-  let nextShown = -1;
+  let nextShown = -1, novaShown = null;
   function drawNext() {
     if (!nctx) return;
     const w = elNext.width, h = elNext.height;
@@ -623,6 +651,10 @@
     else if (e.key === 'ArrowRight') moveCurrent(world.current.x + 18);
     else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); dropCurrent(); }
   });
+  // Supernova: fire with the meter (tap) or the 'S' key when charged.
+  function fireSupernova() { if (useSupernova()) blip(120, 0.15, 'sawtooth', 0.2); }
+  if (elNova) elNova.addEventListener('click', fireSupernova);
+  window.addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') fireSupernova(); });
   const restart = () => { reset(); elOver.classList.add('hidden'); };
   $('restart').addEventListener('click', restart);
   $('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false'); if (!muted) blip(660, 0.1); });
@@ -644,6 +676,13 @@
         for (let i = 0; i < 10; i++) setTimeout(() => burst(FIELD_W * Math.random(), FIELD_H * Math.random(), 40, '#fff'), i * 40);
         shake = 26; floatScore(FIELD_W / 2, FIELD_H / 2, 'BIG BANG  +' + ev.bonus, '#ff8ad0');
         [262, 330, 392, 523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.2, 'triangle', 0.2), i * 90));
+      } else if (ev.type === 'supernova') {
+        // a shockwave from the top sweeping the field; debris flares out
+        shake = Math.min(shake + 16, 26);
+        shockwave(FIELD_W / 2, SPAWN_Y, FIELD_W * 1.1, '#f0883e');
+        for (let i = 0; i < 18; i++) burst(FIELD_W * Math.random(), FIELD_H * (0.2 + 0.7 * Math.random()), 22, '#f0883e');
+        if (ev.cleared > 0) floatScore(FIELD_W / 2, FIELD_H / 2, 'SUPERNOVA  +' + ev.cleared * 30, '#ffd9a0');
+        [392, 523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.18, 'triangle', 0.16), i * 70));
       } else if (ev.type === 'gameover') {
         elFinal.textContent = world.score;
         const isNewBest = world.score > storedBest && world.score > 0;
@@ -744,6 +783,16 @@
     elBest.textContent = world.best;
     if (world.next !== nextShown) { drawNext(); nextShown = world.next; }
     elCombo.textContent = world.combo > 1 ? 'COMBO ×' + world.combo : '';
+    if (elNova) {
+      elNovaFill.style.width = Math.min(100, world.charge / CHARGE_MAX * 100) + '%';
+      const ready = world.superReady;
+      elNova.classList.toggle('ready', ready);
+      elNova.disabled = !ready;
+      if (ready !== novaShown) {
+        elNova.querySelector('#nova-label').textContent = ready ? 'SUPERNOVA · READY' : 'SUPERNOVA';
+        novaShown = ready;
+      }
+    }
   }
 
   // ---- main loop (fixed-timestep accumulator) ------------------------------
