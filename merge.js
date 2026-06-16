@@ -244,7 +244,24 @@
   const MERGE_OVERLAP = 1.02;  // merge on contact (solver rests bodies at ~touching)
   const DROP_COOLDOWN = 0.35;  // s between drops
   const OVER_GRACE = 1.3;      // s a body may sit above the danger line
-  const DROP_TIERS = [0, 0, 0, 0, 1, 1, 1, 2, 2, 3]; // weighted spawn pool
+  // Difficulty ramp: a fixed 0-3 pool the whole run means center-stacking
+  // never gets harder, because merges keep consolidating away the clutter —
+  // a long run should keep demanding more of the field. The pool widens with
+  // world.drops, gradually mixing in bigger bodies that don't tuck into a
+  // tidy single column. Early drops stay exactly the old fixed pool (a fresh
+  // run is never unfair); the ramp matters only once a run runs long.
+  const DROP_POOLS = [
+    { at: 0,   pool: [0, 0, 0, 0, 1, 1, 1, 2, 2, 3] },
+    { at: 30,  pool: [0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4] },
+    { at: 70,  pool: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4] },
+    { at: 120, pool: [0, 1, 1, 2, 2, 3, 3, 4, 4, 5] },
+  ];
+  function dropPool() {
+    let pool = DROP_POOLS[0].pool;
+    for (const p of DROP_POOLS) if (world.drops >= p.at) pool = p.pool;
+    return pool;
+  }
+  const EDGE_SNAP = 26; // field units near a wall that auto-resolve to flush placement
   const SCORE_MILESTONES = [[1000,'KILO-MERGE'],[5000,'MEGA-MERGE'],[10000,'GIGA-MERGE'],[25000,'TERA-MERGE'],[50000,'PETA-MERGE'],[100000,'EXA-MERGE']];
 
   // Daily seed: deterministic from YYYY-MM-DD so every player gets the same run today.
@@ -390,7 +407,7 @@
   }
   function equippedMods() { return Object.keys(meta.equipped).filter(id => meta.equipped[id]); }
 
-  function pickTier() { return DROP_TIERS[Math.floor(world.rng() * DROP_TIERS.length)]; }
+  function pickTier() { const pool = dropPool(); return pool[Math.floor(world.rng() * pool.length)]; }
 
   function reset(seed) {
     world.bodies = [];
@@ -424,6 +441,12 @@
   function moveCurrent(x) {
     if (!world.current) return;
     const r = TIERS[world.current.tier].r;
+    // edge-snap assist: aiming anywhere within EDGE_SNAP of a wall resolves to
+    // flush-against-the-wall, regardless of piece size or pointer precision —
+    // without it, a big piece's reachable "flush" zone is a tiny sliver near
+    // the literal screen edge, which is hard to hit on a touchscreen.
+    if (x <= EDGE_SNAP) x = r;
+    else if (x >= FIELD_W - EDGE_SNAP) x = FIELD_W - r;
     world.current.x = Math.max(r, Math.min(FIELD_W - r, x));
   }
 

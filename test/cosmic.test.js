@@ -106,6 +106,34 @@ let allLow = true;
 for (let i = 0; i < 200; i++) { if (C.pickTier() > 3) allLow = false; }
 ok(allLow, 'only low tiers (0-3) ever spawn — you build up, you are never handed a win');
 
+// --- 9b. difficulty ramp: a long run widens the spawn pool ----------------
+// A fixed pool the whole run lets center-stacking stay easy forever (merges
+// keep consolidating away the clutter). The pool should widen with
+// world.drops so a long run keeps demanding more of the field — while a
+// fresh run (low drops) stays exactly the gentle low-tier pool above.
+C.reset(8);
+C.world.drops = 0;
+let earlyMax = 0;
+for (let i = 0; i < 200; i++) earlyMax = Math.max(earlyMax, C.pickTier());
+ok(earlyMax <= 3, 'a fresh run (drops=0) still only ever sees tiers 0-3');
+C.world.drops = 150;
+let lateMax = 0;
+for (let i = 0; i < 400; i++) lateMax = Math.max(lateMax, C.pickTier());
+ok(lateMax > earlyMax, 'a long run (many drops) widens the spawn pool to bigger tiers');
+
+// --- 9c. edge-snap aim assist: aiming near a wall resolves flush ----------
+// Without this, a big piece's "flush against the wall" zone is a tiny sliver
+// right at the literal screen edge — hard to hit by touch. Aiming anywhere
+// within EDGE_SNAP of a wall should resolve to fully flush regardless of size.
+C.reset(8);
+C.world.current = { tier: C.MAX_TIER, x: C.FIELD_W / 2 };
+C.moveCurrent(10);
+ok(C.world.current.x === C.TIERS[C.MAX_TIER].r, 'aiming near the left wall snaps a big piece flush left');
+C.moveCurrent(C.FIELD_W - 10);
+ok(C.world.current.x === C.FIELD_W - C.TIERS[C.MAX_TIER].r, 'aiming near the right wall snaps a big piece flush right');
+C.moveCurrent(C.FIELD_W / 2);
+ok(C.world.current.x === C.FIELD_W / 2, 'aiming mid-field is unaffected by the edge-snap assist');
+
 // --- 10. Supernova: an in-run, earned clear (no meta-progression) --------
 C.reset(11);
 ok(C.useSupernova() === false, 'Supernova does nothing until charged');
