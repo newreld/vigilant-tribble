@@ -72,15 +72,18 @@ ok(C.world.score >= 5000, 'BIG BANG awards a big bonus (got ' + C.world.score + 
 
 // --- 7. game over: a resting stack above the danger line ----------------
 C.reset(6);
-// a column of distinct tiers (so they don't merge) tall enough to cross the line
-const col = [7, 6, 5, 4, 3];
-let yy = Hf;
-C.world.bodies = col.map((tier, i) => {
+// stack alternating distinct tiers (5,4,5,4… so they never merge) from the
+// floor up, tall enough that the top rises above the danger line — computed
+// from the radii so it stays correct if body sizes change.
+const stack = []; let yy = Hf, id = 950, k = 0;
+while (yy > C.DANGER_Y - 20) {
+  const tier = (k % 2) ? 4 : 5;
   yy -= T[tier].r;
-  const b = { id: 950 + i, tier, x: W / 2, y: yy, vx: 0, vy: 0, age: 1 };
+  stack.push({ id: id++, tier, x: W / 2, y: yy, vx: 0, vy: 0, age: 1 });
   yy -= T[tier].r;
-  return b;
-});
+  k++;
+}
+C.world.bodies = stack;
 let sawOver = false;
 for (let i = 0; i < 12 * 120 && !sawOver; i++) { C.step(1 / 120); if (C.world.over) sawOver = true; }
 ok(sawOver, 'a stack resting above the danger line ends the game');

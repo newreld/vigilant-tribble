@@ -17,15 +17,15 @@
 
   // ---- tiers: asteroid -> ... -> black hole (-> BIG BANG on max merge) -----
   const TIERS = [
-    { name: 'Asteroid',   emoji: '🪨', r: 18,  color: '#9c8b7a' },
-    { name: 'Comet',      emoji: '☄️', r: 24,  color: '#7fd1ff' },
-    { name: 'Moon',       emoji: '🌑', r: 31,  color: '#cfd2d6' },
-    { name: 'Planet',     emoji: '🌍', r: 39,  color: '#4aa3ff' },
-    { name: 'Ringed',     emoji: '🪐', r: 48,  color: '#e0b86b' },
-    { name: 'Dwarf Star', emoji: '⭐', r: 58,  color: '#ffe066' },
-    { name: 'Star',       emoji: '☀️', r: 70,  color: '#ff9f40' },
-    { name: 'Galaxy',     emoji: '🌌', r: 84,  color: '#b56cff' },
-    { name: 'Black Hole', emoji: '⚫', r: 100, color: '#1a1030' },
+    { name: 'Asteroid',   emoji: '🪨', r: 12,  color: '#9c8b7a' },
+    { name: 'Comet',      emoji: '☄️', r: 16,  color: '#7fd1ff' },
+    { name: 'Moon',       emoji: '🌑', r: 21,  color: '#cfd2d6' },
+    { name: 'Planet',     emoji: '🌍', r: 27,  color: '#4aa3ff' },
+    { name: 'Ringed',     emoji: '🪐', r: 35,  color: '#e0b86b' },
+    { name: 'Dwarf Star', emoji: '⭐', r: 45,  color: '#ffe066' },
+    { name: 'Star',       emoji: '☀️', r: 58,  color: '#ff9f40' },
+    { name: 'Galaxy',     emoji: '🌌', r: 74,  color: '#b56cff' },
+    { name: 'Black Hole', emoji: '⚫', r: 94,  color: '#1a1030' },
   ];
   const MAX_TIER = TIERS.length - 1;
   // triangular-ish scoring: bigger merges are worth disproportionately more
@@ -625,7 +625,7 @@
   });
   const restart = () => { reset(); elOver.classList.add('hidden'); };
   $('restart').addEventListener('click', restart);
-  $('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').textContent = muted ? '🔇' : '🔊'; if (!muted) blip(660, 0.1); });
+  $('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false'); if (!muted) blip(660, 0.1); });
 
   // ---- consume sim events into juice ---------------------------------------
   function drainEvents() {
