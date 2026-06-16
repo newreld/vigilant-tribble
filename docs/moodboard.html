@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>COSMIC MERGE — Art Direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink:#0c080f; --ink2:#171019; --paper:#f1e6d0; --muted:#9b8d7e;
+    --line:rgba(241,230,208,.16);
+    --marigold:#f0883e; --marigold-dim:#c9692a; --teal:#4bb39c; --brick:#d24a2c;
+    --display:"Big Shoulders Display","Arial Narrow",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:var(--mono); color:var(--paper); line-height:1.5;
+    background:radial-gradient(140% 90% at 50% -20%, #271a2c 0%, #150e1a 48%, var(--ink) 100%);
+    background-attachment:fixed; padding:0 0 80px;
+  }
+  /* film grain — de-digitizes the flat fills */
+  body::after {
+    content:""; position:fixed; inset:0; z-index:99; pointer-events:none;
+    opacity:.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 28px; }
+
+  /* ---- masthead ---- */
+  header { padding:64px 0 36px; border-bottom:1px solid var(--line); }
+  .eyebrow { font-size:10px; letter-spacing:5px; color:var(--muted); }
+  .brand { display:flex; align-items:center; gap:16px; margin:14px 0 10px; }
+  .orbit { width:34px; height:34px; border:2px solid var(--marigold); border-radius:50%; position:relative; flex:none; }
+  .orbit::after { content:""; position:absolute; width:9px; height:9px; background:var(--teal); border-radius:50%; top:-5px; left:50%; transform:translateX(-50%); }
+  h1 { font-family:var(--display); font-weight:900; font-size:64px; letter-spacing:1px; line-height:.92; }
+  .lede { max-width:64ch; color:var(--paper); opacity:.85; font-size:15px; margin-top:14px; }
+  .lede b { color:var(--marigold); font-weight:600; }
+
+  /* ---- sections ---- */
+  section { padding:48px 0; border-bottom:1px solid var(--line); }
+  .kicker { font-family:var(--display); font-weight:800; font-size:13px; letter-spacing:4px; color:var(--teal); margin-bottom:6px; }
+  h2 { font-family:var(--display); font-weight:800; font-size:34px; letter-spacing:.5px; margin-bottom:18px; }
+  p.note { max-width:70ch; color:var(--paper); opacity:.82; font-size:14px; margin-bottom:18px; }
+
+  /* ---- palette ---- */
+  .swatches { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .sw { border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--ink2); }
+  .sw .chip { height:84px; }
+  .sw .meta { padding:9px 11px; }
+  .sw .role { font-family:var(--display); font-weight:700; font-size:15px; letter-spacing:.5px; }
+  .sw .hex { font-size:11px; color:var(--muted); letter-spacing:1px; }
+  .sw .use { font-size:10px; color:var(--muted); margin-top:3px; line-height:1.35; }
+
+  /* ---- type ---- */
+  .type-row { display:flex; flex-wrap:wrap; gap:40px; align-items:flex-end; }
+  .spec { flex:1; min-width:280px; }
+  .spec .label { font-size:10px; letter-spacing:3px; color:var(--muted); margin-bottom:10px; }
+  .disp-xl { font-family:var(--display); font-weight:900; font-size:58px; line-height:.9; }
+  .disp-sm { font-family:var(--display); font-weight:700; font-size:22px; letter-spacing:1px; color:var(--marigold); }
+  .mono-num { font-family:var(--mono); font-weight:600; font-size:48px; color:var(--marigold); font-variant-numeric:tabular-nums; }
+  .mono-body { font-family:var(--mono); font-size:13px; color:var(--paper); opacity:.8; }
+  .scale-note { font-size:12px; color:var(--muted); margin-top:14px; }
+
+  /* ---- motif ---- */
+  .motif-row { display:flex; gap:48px; align-items:center; flex-wrap:wrap; }
+  .motif-mark { width:120px; height:120px; border:3px solid var(--marigold); border-radius:50%; position:relative; flex:none; }
+  .motif-mark::after { content:""; position:absolute; width:22px; height:22px; background:var(--teal); border-radius:50%; top:-12px; left:50%; transform:translateX(-50%); }
+  .motif-mark::before { content:""; position:absolute; inset:18px; border:1px dashed var(--line); border-radius:50%; }
+
+  /* ---- bodies ---- */
+  .bodies-frame { border:1px solid var(--line); border-radius:12px; background:#0a0710; padding:14px; }
+  .bodies-frame img { width:100%; display:block; border-radius:6px; }
+  .tier-legend { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:16px; font-size:12px; color:var(--muted); }
+  .tier-legend b { color:var(--paper); font-weight:600; }
+
+  /* ---- do / don't ---- */
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  .card { border:1px solid var(--line); border-radius:12px; padding:20px 22px; background:var(--ink2); }
+  .card.do { border-top:3px solid var(--teal); }
+  .card.dont { border-top:3px solid var(--brick); }
+  .card h3 { font-family:var(--display); font-weight:800; font-size:18px; letter-spacing:2px; margin-bottom:12px; }
+  .card.do h3 { color:var(--teal); } .card.dont h3 { color:var(--brick); }
+  .card li { list-style:none; font-size:13px; padding:7px 0 7px 20px; position:relative; opacity:.9; border-top:1px solid var(--line); }
+  .card li:first-of-type { border-top:none; }
+  .card li::before { position:absolute; left:0; top:7px; }
+  .card.do li::before { content:"+"; color:var(--teal); font-weight:700; }
+  .card.dont li::before { content:"\00d7"; color:var(--brick); font-weight:700; }
+
+  footer { padding:40px 0 0; color:var(--muted); font-size:12px; }
+  footer a { color:var(--marigold); }
+  @media (max-width:680px){ h1{font-size:44px} .cols{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">ART DIRECTION · v1</div>
+    <div class="brand"><span class="orbit"></span><h1>COSMIC&nbsp;MERGE</h1></div>
+    <p class="lede">A merge game drawn in the language of <b>1970s NASA mission posters</b> and
+    mid-century space graphics: warm ink, marigold + dusty teal, cream paper, flat fills with
+    print grain. The opposite of the default "neon-on-navy, glassy spheres" space game. The
+    point of view <b>is</b> the differentiation — a budget can't buy taste.</p>
+  </header>
+
+  <section>
+    <div class="kicker">01 — PALETTE</div>
+    <h2>Warm ink, one marigold, one teal</h2>
+    <p class="note">One dominant accent (marigold), one secondary (teal), brick reserved strictly
+    for danger. Everything sits on warm near-black ink, never blue-black. Cream — not white — is
+    the text color. Low saturation in the chrome; let the celestial bodies carry the color.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#0c080f"></div><div class="meta"><div class="role">Ink</div><div class="hex">#0C080F</div><div class="use">Base background. Warm black, never navy.</div></div></div>
+      <div class="sw"><div class="chip" style="background:#171019"></div><div class="meta"><div class="role">Ink 2</div><div class="hex">#171019</div><div class="use">Raised panels, cards.</div></div></div>
+      <div class="sw"><div class="chip" style="background:#f1e6d0"></div><div class="meta"><div class="role">Paper</div><div class="hex">#F1E6D0</div><div class="use">Primary text. Warm cream, not #fff.</div></div></div>
+      <div class="sw"><div class="chip" style="background:#9b8d7e"></div><div class="meta"><div class="role">Muted</div><div class="hex">#9B8D7E</div><div class="use">Labels, secondary data.</div></div></div>
+      <div class="sw"><div class="chip" style="background:#f0883e"></div><div class="meta"><div class="role">Marigold</div><div class="hex">#F0883E</div><div class="use">Primary accent. Score, CTAs, motif.</div></div></div>
+      <div class="sw"><div class="chip" style="background:#c9692a"></div><div class="meta"><div class="role">Marigold dim</div><div class="hex">#C9692A</div><div class="use">Button drop / pressed states.</div></div></div>
+      <div class="sw"><div class="chip" style="background:#4bb39c"></div><div class="meta"><div class="role">Teal</div><div class="hex">#4BB39C</div><div class="use">Secondary accent. Badges, the orbit dot.</div></div></div>
+      <div class="sw"><div class="chip" style="background:#d24a2c"></div><div class="meta"><div class="role">Brick</div><div class="hex">#D24A2C</div><div class="use">Danger only. The line, game-over.</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">02 — TYPE</div>
+    <h2>Big Shoulders Display + IBM Plex Mono</h2>
+    <p class="note">A condensed display face for identity, a clean mono for all data — deliberately
+    <i>not</i> Space Grotesk or Inter (the AI-default fonts). Commit to extremes: heavy display
+    weights against a light mono, with big size jumps. Always tabular numerals for SCORE / BEST.</p>
+    <div class="type-row">
+      <div class="spec">
+        <div class="label">DISPLAY — Big Shoulders, 900</div>
+        <div class="disp-xl">GALAXY FULL</div>
+        <div class="disp-sm" style="margin-top:10px">COMBO ×4 · BIG BANG</div>
+      </div>
+      <div class="spec">
+        <div class="label">DATA — IBM Plex Mono, tabular</div>
+        <div class="mono-num">128,640</div>
+        <div class="mono-body" style="margin-top:10px">free · no ads · no timers · no catch</div>
+      </div>
+    </div>
+    <div class="scale-note">Hierarchy by extremes — display 900 vs mono 400, 3×+ size jumps. One element dominates each view.</div>
+  </section>
+
+  <section>
+    <div class="kicker">03 — SIGNATURE MOTIF</div>
+    <h2>The orbital ring</h2>
+    <div class="motif-row">
+      <div class="motif-mark"></div>
+      <p class="note" style="margin:0; flex:1; min-width:280px">One recurring mark, used everywhere: a thin
+      marigold ring with a single teal body on its orbit. It's the wordmark bullet, the next-piece
+      frame, and the game-over flourish. A single motif repeated consistently is what people
+      remember — so it appears at every scale rather than as decoration in one place.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">04 — CELESTIAL BODIES</div>
+    <h2>Flat poster planets, not glassy spheres</h2>
+    <p class="note">The bodies are the #1 brand surface. One rendering language across all nine tiers:
+    flat fills, hard-edged bands and rings, stippled craters, paper grain — no sphere-normal
+    gradients, no bloom. Each tier has a distinct silhouette and hue so it's readable at a glance.
+    All rendered by one pure pixel shader (<span style="color:var(--marigold)">shadeBody()</span>),
+    shared by the game and these previews so they never drift.</p>
+    <div class="bodies-frame"><img src="bodies.png" alt="The nine celestial bodies, tier 0 to 8" /></div>
+    <div class="tier-legend">
+      <span><b>0</b> Asteroid</span><span><b>1</b> Comet</span><span><b>2</b> Moon</span>
+      <span><b>3</b> Planet</span><span><b>4</b> Gas giant</span><span><b>5</b> Dwarf star</span>
+      <span><b>6</b> Red giant</span><span><b>7</b> Galaxy</span><span><b>8</b> Black hole</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">05 — RULES</div>
+    <h2>Do &amp; don't</h2>
+    <div class="cols">
+      <div class="card do">
+        <h3>DO</h3>
+        <ul>
+          <li>Flat fills + print grain. Matter, not gradients.</li>
+          <li>1px solid borders, 8–12px radii, shadows under 0 2px 8px.</li>
+          <li>Intentional asymmetry — wordmark hard-left, data clustered right.</li>
+          <li>Snappy, mechanical motion. Pop and settle, no float.</li>
+          <li>Let the bodies carry saturation; keep the chrome quiet.</li>
+        </ul>
+      </div>
+      <div class="card dont">
+        <h3>DON'T</h3>
+        <ul>
+          <li>Glassmorphism / backdrop-blur, glow haze, big soft shadows.</li>
+          <li>Neon cyan + gold on navy — the default-dark-mode cliché.</li>
+          <li>Space Grotesk / Inter; emoji as iconography.</li>
+          <li>Elastic / bouncy overshoot easing on UI.</li>
+          <li>Perfectly symmetric, evenly-spaced, opinion-free layout.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Anchored to a named movement: mid-century / 1970s NASA-poster space. Full rationale in
+    <a href="DESIGN-TELLS.md">docs/DESIGN-TELLS.md</a>. Palette tokens live in <a href="../merge.css">merge.css</a>;
+    bodies in <a href="../merge.js">merge.js → shadeBody()</a>.
+  </footer>
+
+</div>
+</body>
+</html>

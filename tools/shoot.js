@@ -50,6 +50,16 @@ const VIEWS = [
       console.log('  wrote screenshots/' + v.name + '.png');
       await ctx.close();
     }
+    // art-direction moodboard (desktop, full page)
+    try {
+      const ctx = await browser.newContext({ viewport: { width: 1120, height: 1400 }, deviceScaleFactor: 2 });
+      const page = await ctx.newPage();
+      await page.goto(`http://localhost:${PORT}/docs/moodboard.html`, { waitUntil: 'load', timeout: 30000 });
+      await page.waitForTimeout(1500); // webfonts
+      await page.screenshot({ path: 'screenshots/moodboard.png', fullPage: true });
+      console.log('  wrote screenshots/moodboard.png');
+      await ctx.close();
+    } catch (e) { console.log('  moodboard step skipped: ' + e.message); }
   } finally {
     await browser.close();
     server.close();
