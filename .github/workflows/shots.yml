@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    paths: [index.html, merge.css, merge.js, tools/shoot.js]
 
 permissions:
   contents: write
