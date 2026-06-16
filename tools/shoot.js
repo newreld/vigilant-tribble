@@ -50,6 +50,32 @@ const VIEWS = [
       console.log('  wrote screenshots/' + v.name + '.png');
       await ctx.close();
     }
+    // UI overlays: game-over card + Star Chart (driven via the exposed core)
+    try {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+      const page = await ctx.newPage();
+      await page.goto(`http://localhost:${PORT}/index.html`, { waitUntil: 'load', timeout: 30000 });
+      await page.waitForTimeout(2000);
+      // populate a profile: some stardust, one cosmetic owned (auto-worn)
+      await page.evaluate(() => {
+        const C = window.__cosmic;
+        C.meta.stardust = 1850;
+        C.metaUnlock('theme_aurora'); // owned + auto-worn; rest stay buyable
+        C.world.score = 12345;
+        C.world.events.push({ type: 'gameover', earned: 167, modified: false });
+        C.world.over = true;
+      });
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: 'screenshots/gameover.png' });
+      console.log('  wrote screenshots/gameover.png');
+      // open the Star Chart from the game-over card
+      await page.click('#open-chart');
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: 'screenshots/starchart.png' });
+      console.log('  wrote screenshots/starchart.png');
+      await ctx.close();
+    } catch (e) { console.log('  ui-overlay step skipped: ' + e.message); }
+
     // art-direction moodboard (desktop, full page)
     try {
       const ctx = await browser.newContext({ viewport: { width: 1120, height: 1400 }, deviceScaleFactor: 2 });
