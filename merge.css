@@ -61,7 +61,7 @@ body { display: flex; flex-direction: column; }
 .orbit { width: 15px; height: 15px; border: 1.5px solid var(--marigold); border-radius: 50%; position: relative; flex: none; }
 .orbit::after { content: ""; position: absolute; width: 4px; height: 4px; background: var(--teal); border-radius: 50%; top: -2px; left: 50%; }
 
-.hud-stats { display: flex; align-items: flex-end; gap: 16px; }
+.hud-stats { display: flex; align-items: center; gap: 16px; }
 .stat { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
 .hud-label { font-size: 8px; letter-spacing: 2.5px; color: var(--muted); margin-bottom: 3px; }
 .hud-value { font-size: 26px; font-weight: 600; color: var(--marigold); font-variant-numeric: tabular-nums; }
@@ -84,6 +84,28 @@ body { display: flex; flex-direction: column; }
 #muteBtn .slash { display: none; }
 #muteBtn[aria-pressed="true"] .slash { display: block; }
 #muteBtn[aria-pressed="true"] .waves { opacity: 0.25; }
+
+/* supernova meter — charged by combos, fired to clear small debris.
+   Subtle while charging; turns marigold + becomes tappable when ready. */
+#nova {
+  position: relative; z-index: 2; display: flex; align-items: center; justify-content: center;
+  margin: 6px 16px 0; height: 16px; padding: 0;
+  border: 1px solid var(--line); border-radius: 8px; background: none;
+  overflow: hidden; cursor: default; font-family: var(--mono);
+  -webkit-appearance: none; appearance: none;
+}
+#nova-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+  background: var(--teal); opacity: .22; transition: width .18s ease-out;
+}
+#nova-label { position: relative; font-size: 8px; letter-spacing: 3px; color: var(--muted); }
+#nova.ready { cursor: pointer; border-color: var(--marigold); animation: novaPulse 1.3s ease-in-out infinite; }
+#nova.ready #nova-fill { width: 100% !important; background: var(--marigold); opacity: .92; }
+#nova.ready #nova-label { color: var(--ink); font-weight: 600; }
+@keyframes novaPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(240,136,62,0); }
+  50%      { box-shadow: 0 0 10px 0 rgba(240,136,62,.45); }
+}
 
 #combo {
   position: relative; z-index: 2; text-align: center; height: 20px;

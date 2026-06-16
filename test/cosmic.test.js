@@ -105,6 +105,24 @@ let allLow = true;
 for (let i = 0; i < 200; i++) { if (C.pickTier() > 3) allLow = false; }
 ok(allLow, 'only low tiers (0-3) ever spawn — you build up, you are never handed a win');
 
+// --- 10. Supernova: an in-run, earned clear (no meta-progression) --------
+C.reset(11);
+ok(C.useSupernova() === false, 'Supernova does nothing until charged');
+// charge it directly, then fire it on a cluttered field
+C.world.charge = C.CHARGE_MAX; C.world.superReady = true;
+C.world.bodies = [
+  { id: 970, tier: 0, x: 100, y: 500, vx: 0, vy: 0, age: 1 }, // debris
+  { id: 971, tier: 1, x: 140, y: 500, vx: 0, vy: 0, age: 1 }, // debris
+  { id: 972, tier: 4, x: 200, y: 500, vx: 0, vy: 0, age: 1 }, // survives
+  { id: 973, tier: 6, x: 300, y: 500, vx: 0, vy: 0, age: 1 }, // survives
+];
+C.world.score = 0;
+ok(C.useSupernova() === true, 'Supernova fires when charged');
+ok(C.world.bodies.length === 2 && C.world.bodies.every(b => b.tier > 1), 'Supernova clears only small debris (tiers 0-1)');
+ok(C.world.score > 0, 'Supernova awards points for cleared debris (got ' + C.world.score + ')');
+ok(C.world.superReady === false && C.world.charge === 0, 'firing resets the charge meter');
+ok(C.useSupernova() === false, 'cannot fire again until recharged');
+
 // --- summary -------------------------------------------------------------
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
