@@ -167,6 +167,19 @@ body { display: flex; flex-direction: column; }
   clip-path: polygon(50% 0, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0 50%, 41% 41%);
 }
 
+/* daily challenge button — teal outline, between PLAY AGAIN and STAR CHART */
+#daily-btn {
+  display: block; margin: 10px auto 0; padding: 11px 28px; border-radius: 9px;
+  font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: 2px; cursor: pointer;
+  color: var(--teal); background: none; border: 1px solid var(--teal);
+  transition: background .1s, color .1s;
+}
+#daily-btn:hover { background: var(--teal); color: #07120f; }
+.go-daily {
+  margin-top: 10px; font-size: 10px; letter-spacing: 2px;
+  color: var(--teal); font-family: var(--mono);
+}
+
 /* secondary button — quiet outline, distinct from the marigold PLAY AGAIN */
 #open-chart {
   display: inline-flex; align-items: center; gap: 2px; margin: 12px auto 0;

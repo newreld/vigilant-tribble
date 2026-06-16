@@ -227,6 +227,26 @@ ok(!C.world.events.some(e => e.type === 'milestone' && e.label === 'KILO-MERGE')
 C.reset(19);
 ok(C.world.milestoneAt === 0, 'milestoneAt resets to 0 on reset');
 
+// --- 14. Daily challenge: same seed every day, no loadout modifiers -----
+ok(typeof C.dailySeed === 'function', 'dailySeed() is exported');
+const ds1 = C.dailySeed(), ds2 = C.dailySeed();
+ok(ds1 === ds2, 'dailySeed() returns the same value twice in the same day');
+ok(typeof C.todayStr() === 'string' && C.todayStr().length === 10, 'todayStr() returns YYYY-MM-DD');
+
+// daily run: no modifiers even if mod_primed is equipped
+C.metaReset(); C.meta.stardust = 1000; C.metaUnlock('mod_primed'); C.metaEquip('mod_primed', true);
+C.world.daily = true; C.reset(C.dailySeed());
+ok(C.world.modified === false, 'daily run is never flagged as modified');
+ok(C.world.charge === 0, 'mod_primed has no effect in a daily run');
+
+// daily best tracking
+C.metaReset(); C.world.daily = true; C.reset(20);
+C.world.score = 5000; C.world.over = false; C.world.overTimer = 999;
+C.world.bodies = [{ id: 999, tier: 5, x: C.FIELD_W / 2, y: C.DANGER_Y - 5, vx: 0, vy: 0, age: 1 }];
+for (let i = 0; i < 12 * 120 && !C.world.over; i++) C.step(1 / 120);
+ok(C.world.over && C.meta.bestDailyScore === 5000, 'daily run sets bestDailyScore (got ' + C.meta.bestDailyScore + ')');
+ok(C.meta.bestDailyDate === C.todayStr(), 'bestDailyDate matches today');
+
 // --- summary -------------------------------------------------------------
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

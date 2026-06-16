@@ -247,6 +247,19 @@
   const DROP_TIERS = [0, 0, 0, 0, 1, 1, 1, 2, 2, 3]; // weighted spawn pool
   const SCORE_MILESTONES = [[1000,'KILO-MERGE'],[5000,'MEGA-MERGE'],[10000,'GIGA-MERGE'],[25000,'TERA-MERGE'],[50000,'PETA-MERGE'],[100000,'EXA-MERGE']];
 
+  // Daily seed: deterministic from YYYY-MM-DD so every player gets the same run today.
+  function dailySeed() {
+    const d = new Date();
+    const n = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    const m = mulberry32(n * 1664525 + 1013904223);
+    m(); m(); // warm up
+    return (m() * 0x100000000) >>> 0;
+  }
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
   // ---- seedable RNG (deterministic for tests) -----------------------------
   function mulberry32(a) {
     return function () {
@@ -270,6 +283,7 @@
     milestoneAt: 0, // highest score milestone already announced this run
     // run stats: tracked per session, shown on game-over, reset on reset()
     drops: 0, peakCombo: 0, topTier: 0,
+    daily: false, // true for a daily-challenge run (no loadout modifiers)
   };
 
   // ---- Supernova: an in-run, earned tool — NOT meta-progression ------------
@@ -334,11 +348,14 @@
     theme: null,       // selected (unlocked) cosmetic field theme id, or null
     bestClassic: 0,    // fair, unmodified high score (for an honest leaderboard)
     codex: new Array(TIERS.length).fill(false), // which tiers have been created by merge (ever)
+    bestDailyScore: 0, // personal best on today's daily seed
+    bestDailyDate: '', // 'YYYY-MM-DD' of the day the daily best was set
   };
   function metaReset() {
     meta.stardust = 0; meta.unlocked = {}; meta.equipped = {};
     meta.theme = null; meta.bestClassic = 0;
     meta.codex = new Array(TIERS.length).fill(false);
+    meta.bestDailyScore = 0; meta.bestDailyDate = '';
   }
   // Stardust from a run: scales with score but sub-linearly (sqrt), so a single
   // huge run can't trivialize the economy and grinding stays meaningful.
@@ -371,12 +388,16 @@
     world.charge = 0; world.superReady = false;
     world.idSeq = 1; world.events = []; world.milestoneAt = 0;
     world.drops = 0; world.peakCombo = 0; world.topTier = 0;
-    // apply the equipped loadout. Equipping any modifier flags the run as
-    // "modified" so it won't set the fair Classic record.
+    // daily runs are pure (no loadout modifiers) for a fair daily comparison.
+    // Classic runs get the full equipped loadout (modified flag when active).
     world.graceMult = 1;
-    world.modified = equippedMods().length > 0;
-    if (meta.equipped['mod_primed']) world.charge = Math.floor(CHARGE_MAX / 2);
-    if (meta.equipped['mod_steady']) world.graceMult = 1.6;
+    if (!world.daily) {
+      world.modified = equippedMods().length > 0;
+      if (meta.equipped['mod_primed']) world.charge = Math.floor(CHARGE_MAX / 2);
+      if (meta.equipped['mod_steady']) world.graceMult = 1.6;
+    } else {
+      world.modified = false;
+    }
     if (seed != null) world.rng = mulberry32(seed >>> 0);
     world.next = pickTier();
     spawnCurrent();
@@ -556,13 +577,20 @@
       world.overTimer += h;
       if (world.overTimer >= OVER_GRACE * (world.graceMult || 1)) {
         world.over = true;
-        // cash the run out into stardust; a clean (unmodified) run can set the
-        // fair Classic record.
         const earned = stardustForScore(world.score);
         meta.stardust += earned;
         if (!world.modified && world.score > meta.bestClassic) meta.bestClassic = world.score;
+        let isNewDailyBest = false;
+        if (world.daily) {
+          const today = todayStr();
+          if (today !== meta.bestDailyDate || world.score > meta.bestDailyScore) {
+            isNewDailyBest = true;
+            meta.bestDailyScore = world.score; meta.bestDailyDate = today;
+          }
+        }
         world.events.push({ type: 'gameover', earned, modified: world.modified,
-          drops: world.drops, peakCombo: world.peakCombo, topTier: world.topTier });
+          drops: world.drops, peakCombo: world.peakCombo, topTier: world.topTier,
+          daily: world.daily, isNewDailyBest });
       }
     } else {
       world.overTimer = Math.max(0, world.overTimer - h * 2);
@@ -574,7 +602,7 @@
     reset, step, dropCurrent, moveCurrent, spawnCurrent, pickTier, mulberry32,
     TIER_ART, GLOW_MAX, shadeBody, useSupernova, CHARGE_MAX,
     meta, META_ITEMS, metaReset, stardustForScore, metaUnlock, metaEquip,
-    metaSetTheme, equippedMods, CODEX_BONUS };
+    metaSetTheme, equippedMods, CODEX_BONUS, dailySeed, todayStr };
   if (typeof window !== 'undefined') window.__cosmic = core;
   if (typeof module !== 'undefined' && module.exports) module.exports = core;
 
@@ -656,6 +684,8 @@
       meta.equipped = m.equipped || {};
       meta.theme = m.theme || null;
       meta.bestClassic = m.bestClassic | 0;
+      meta.bestDailyScore = m.bestDailyScore | 0;
+      meta.bestDailyDate = m.bestDailyDate || '';
       if (Array.isArray(m.codex)) {
         m.codex.forEach((v, i) => { if (v && i < TIERS.length) meta.codex[i] = true; });
       }
@@ -771,13 +801,14 @@
   function fireSupernova() { if (useSupernova()) blip(120, 0.15, 'sawtooth', 0.2); }
   if (elNova) elNova.addEventListener('click', fireSupernova);
   window.addEventListener('keydown', e => { if (e.key === 's' || e.key === 'S') fireSupernova(); });
-  const restart = () => { reset(); elOver.classList.add('hidden'); };
-  $('restart').addEventListener('click', restart);
+  $('restart').addEventListener('click', () => { world.daily = false; reset(); elOver.classList.add('hidden'); });
   $('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false'); if (!muted) blip(660, 0.1); });
 
   // ---- Star Chart: spend stardust earned by playing -----------------------
   const scBalance = $('sc-balance'), scCosmetic = $('sc-cosmetic'), scModifier = $('sc-modifier'), scCodex = $('sc-codex');
   const elGoStats = $('go-stats'), elNextName = $('next-name');
+  const elGoDailyBanner = $('go-daily'), elDailyBtn = $('daily-btn');
+  if (elDailyBtn) elDailyBtn.addEventListener('click', () => { world.daily = true; reset(dailySeed()); elOver.classList.add('hidden'); });
   function chartItemEl(item) {
     const owned = !!meta.unlocked[item.id];
     const el = document.createElement('div');
@@ -885,7 +916,15 @@
         elFinal.textContent = world.score;
         const isNewBest = world.score > storedBest && world.score > 0;
         persistBest();
-        elNewBest.classList.toggle('hidden', !isNewBest);
+        elNewBest.classList.toggle('hidden', !isNewBest || ev.daily);
+        if (elGoDailyBanner) {
+          if (ev.daily) {
+            elGoDailyBanner.classList.remove('hidden');
+            elGoDailyBanner.textContent = ev.isNewDailyBest ? 'NEW DAILY BEST' : 'DAILY BEST · ' + meta.bestDailyScore;
+          } else {
+            elGoDailyBanner.classList.add('hidden');
+          }
+        }
         if (elGoStats) {
           const topName = ev.topTier > 0 ? TIERS[ev.topTier].name : '—';
           elGoStats.innerHTML =
