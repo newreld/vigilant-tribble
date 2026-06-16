@@ -202,6 +202,31 @@ const cxBonusEv = C.world.events.find(e => e.type === 'codex_unlock' && e.tier =
 ok(cxBonusEv && cxBonusEv.bonus === 25, 'codex_unlock event for Ringed carries the bonus amount');
 ok(C.meta.stardust === sdBefore + 25, 'first Ringed Planet discovery awards +25 stardust immediately');
 
+// --- 13. Score milestones: per-run celebrations --------------------------
+C.reset(18);
+C.world.score = 999; C.world.events.length = 0;
+// simulate a merge that pushes score past 1000
+C.world.bodies = [
+  { id: 986, tier: 0, x: 170, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+  { id: 987, tier: 0, x: 190, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+];
+stepN(3);
+const msEv = C.world.events.find(e => e.type === 'milestone');
+ok(msEv && msEv.label === 'KILO-MERGE', '1000-point milestone fires KILO-MERGE event');
+// crossing the same threshold again does not re-fire
+const msCount = C.world.events.filter(e => e.type === 'milestone').length;
+C.world.events.length = 0;
+C.world.bodies = [
+  { id: 988, tier: 0, x: 170, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+  { id: 989, tier: 0, x: 190, y: Hf - T[0].r, vx: 0, vy: 0, age: 1 },
+];
+stepN(3);
+ok(!C.world.events.some(e => e.type === 'milestone' && e.label === 'KILO-MERGE'),
+   'milestone does not fire again once already passed this run');
+// milestones reset on a new run
+C.reset(19);
+ok(C.world.milestoneAt === 0, 'milestoneAt resets to 0 on reset');
+
 // --- summary -------------------------------------------------------------
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

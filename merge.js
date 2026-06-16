@@ -245,6 +245,7 @@
   const DROP_COOLDOWN = 0.35;  // s between drops
   const OVER_GRACE = 1.3;      // s a body may sit above the danger line
   const DROP_TIERS = [0, 0, 0, 0, 1, 1, 1, 2, 2, 3]; // weighted spawn pool
+  const SCORE_MILESTONES = [[1000,'KILO-MERGE'],[5000,'MEGA-MERGE'],[10000,'GIGA-MERGE'],[25000,'TERA-MERGE'],[50000,'PETA-MERGE'],[100000,'EXA-MERGE']];
 
   // ---- seedable RNG (deterministic for tests) -----------------------------
   function mulberry32(a) {
@@ -266,6 +267,7 @@
     rng: mulberry32(Date.now() >>> 0),
     idSeq: 1,
     events: [], // {type, x, y, tier} consumed by the renderer for juice
+    milestoneAt: 0, // highest score milestone already announced this run
   };
 
   // ---- Supernova: an in-run, earned tool — NOT meta-progression ------------
@@ -365,7 +367,7 @@
     world.score = 0; world.over = false; world.overTimer = 0;
     world.dropTimer = 0; world.combo = 0; world.comboTimer = 0;
     world.charge = 0; world.superReady = false;
-    world.idSeq = 1; world.events = [];
+    world.idSeq = 1; world.events = []; world.milestoneAt = 0;
     // apply the equipped loadout. Equipping any modifier flags the run as
     // "modified" so it won't set the fair Classic record.
     world.graceMult = 1;
@@ -505,6 +507,13 @@
         }
       }
       if (world.score > world.best) world.best = world.score;
+      // score milestone celebrations (per-run, non-persistent)
+      for (const [threshold, label] of SCORE_MILESTONES) {
+        if (world.score >= threshold && world.milestoneAt < threshold) {
+          world.milestoneAt = threshold;
+          world.events.push({ type: 'milestone', label, x: FIELD_W / 2, y: FIELD_H * 0.32 });
+        }
+      }
     }
 
     // BIG BANG: if two black holes (max tier) touch, detonate.
@@ -853,6 +862,10 @@
         for (let i = 0; i < 18; i++) burst(FIELD_W * Math.random(), FIELD_H * (0.2 + 0.7 * Math.random()), 22, '#f0883e');
         if (ev.cleared > 0) floatScore(FIELD_W / 2, FIELD_H / 2, 'SUPERNOVA  +' + ev.cleared * 30, '#ffd9a0');
         [392, 523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.18, 'triangle', 0.16), i * 70));
+      } else if (ev.type === 'milestone') {
+        shake = Math.min(shake + 6, 18);
+        floatScore(ev.x, ev.y, ev.label + '!', '#f1e6d0');
+        [523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.14, 'triangle', 0.14), i * 65));
       } else if (ev.type === 'codex_unlock') {
         const bonusStr = ev.bonus ? '  +' + ev.bonus : '';
         floatScore(ev.x, ev.y - 28, 'FIRST  ' + TIERS[ev.tier].name.toUpperCase() + '!' + bonusStr, '#4bb39c');
