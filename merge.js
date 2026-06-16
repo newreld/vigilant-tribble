@@ -712,9 +712,10 @@
   const saveMeta = () => { try { localStorage.setItem('cosmic.meta', JSON.stringify(meta)); } catch (e) {} };
   loadMeta();
 
-  // ---- audio --------------------------------------------------------------
+  // ---- audio + haptics ----------------------------------------------------
   let actx = null;
   const audio = () => { if (muted) return null; if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } } return actx; };
+  const haptic = (pat = 4) => { try { navigator.vibrate && navigator.vibrate(pat); } catch (_) {} };
   function blip(freq, dur = 0.08, type = 'sine', gain = 0.16) {
     const a = audio(); if (!a) return;
     const o = a.createOscillator(), g = a.createGain();
@@ -746,6 +747,7 @@
   // ---- juice: particles, shake, floaters, shockwave rings, body pops -------
   let parts = [], shake = 0, floaters = [], rings = [], bangFlash = 0, comboFlash = 0;
   let prevDanger = false; // for danger-onset audio cue
+  let scoreCountUp = null; // { to, start, dur } — animates the final-score display
   const popById = new Map(); // body id -> pop start time (performance.now)
   function burst(x, y, n, color) {
     for (let i = 0; i < n; i++) {
@@ -933,12 +935,14 @@
         const mult = 1 + (world.combo - 1) * 0.5;
         floatScore(ev.x, ev.y, '+' + Math.round(POINTS[ev.tier] * mult), '#f1e6d0');
         mergeSound(ev.tier, world.combo);
+        haptic(ev.tier < 4 ? 3 : 6); // brief buzz — stronger for higher tiers
         if (world.combo > 1) {
           floatScore(ev.x, ev.y - 22, 'COMBO x' + world.combo, '#ffe066');
           comboFlash = Math.min(comboFlash + 0.28, 0.9);
         }
       } else if (ev.type === 'bigbang') {
         bangFlash = 1; shake = 26;
+        haptic([30, 15, 30, 15, 60]); // BIG BANG rhythm
         for (let i = 0; i < 14; i++) setTimeout(() => burst(FIELD_W * Math.random(), FIELD_H * Math.random(), 48, '#fff'), i * 30);
         setTimeout(() => floatScore(FIELD_W / 2, FIELD_H / 2, 'BIG BANG  +' + ev.bonus, '#ff8ad0'), 300);
         [196, 262, 330, 392, 523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 0.22, 'triangle', 0.22), i * 80));
@@ -959,7 +963,8 @@
         [392, 523, 659].forEach((f, i) => setTimeout(() => blip(f, 0.15, 'triangle', 0.18), i * 80));
         saveMeta(); // persist the discovery + bonus immediately, even mid-run
       } else if (ev.type === 'gameover') {
-        elFinal.textContent = world.score;
+        elFinal.textContent = '0';
+        scoreCountUp = { to: world.score, start: performance.now(), dur: Math.min(1400, 400 + world.score / 40) };
         const isNewBest = world.score > storedBest && world.score > 0;
         persistBest();
         elNewBest.classList.toggle('hidden', !isNewBest || ev.daily);
@@ -996,6 +1001,7 @@
         saveMeta();
         elOver.classList.remove('hidden');
         blip(160, 0.4, 'sawtooth', 0.2);
+        haptic([20, 10, 40]); // game-over pulse
       }
     }
     world.events.length = 0;
@@ -1142,6 +1148,14 @@
     ctx.restore();
 
     shake *= 0.85; if (shake < 0.3) shake = 0;
+
+    // score count-up animation on game-over card
+    if (scoreCountUp) {
+      const t = Math.min(1, (performance.now() - scoreCountUp.start) / scoreCountUp.dur);
+      const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      elFinal.textContent = Math.round(scoreCountUp.to * ease).toLocaleString();
+      if (t >= 1) { elFinal.textContent = scoreCountUp.to.toLocaleString(); scoreCountUp = null; }
+    }
 
     // HUD
     elScore.textContent = world.score;
