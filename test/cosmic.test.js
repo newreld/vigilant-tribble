@@ -129,23 +129,26 @@ ok(lateMax > midMax, 'a very long run (200+ drops) keeps escalating past the mid
 ok(lateZeros > 0, 'tier-0 still spawns deep in a run so a lone asteroid is always clearable');
 ok(earlyZeros > lateZeros, 'but tier-0 thins out over a run as bigger bodies crowd in');
 
-// --- 9c. edge aim mapping: pointer travel spans the legal centre range -----
-// The full screen width of pointer travel maps onto [r, FIELD_W-r], so
-// dragging to the very edge always lands a piece flush against the wall no
-// matter its size, while dead-centre stays dead-centre.
+// --- 9c. edge aim mapping: the piece centre tracks the pointer 1:1 ---------
+// No size-dependent scaling: pointing at a spot puts the centre exactly there
+// (so the aim line never drifts off your finger), clamped only so a body can't
+// rest past a wall — its edge sits flush at the extremes.
 C.reset(8);
 const bigR = C.TIERS[C.MAX_TIER].r;
 C.world.current = { tier: C.MAX_TIER, x: C.FIELD_W / 2 };
+C.moveCurrent(150);
+ok(C.world.current.x === 150, 'the centre goes exactly where you point (no scaling/drift)');
 C.moveCurrent(0);
-ok(C.world.current.x === bigR, 'dragging to the left screen edge lands a big piece flush left');
+ok(C.world.current.x === bigR, 'pointing past the left wall clamps a big piece flush left');
 C.moveCurrent(C.FIELD_W);
-ok(C.world.current.x === C.FIELD_W - bigR, 'dragging to the right screen edge lands a big piece flush right');
-C.moveCurrent(C.FIELD_W / 2);
-ok(C.world.current.x === C.FIELD_W / 2, 'aiming mid-field keeps the piece dead-centre');
-// a small piece reaches flush at the same finger position a big one does
+ok(C.world.current.x === C.FIELD_W - bigR, 'pointing past the right wall clamps a big piece flush right');
+// a small piece tracks the SAME point 1:1 too — both pieces reach a given
+// target identically; only their flush limit differs by radius.
 C.world.current = { tier: 0, x: C.FIELD_W / 2 };
+C.moveCurrent(150);
+ok(C.world.current.x === 150, 'a small piece tracks the same point 1:1 as a big one');
 C.moveCurrent(0);
-ok(C.world.current.x === C.TIERS[0].r, 'a small piece is also flush left at the same edge-most aim');
+ok(C.world.current.x === C.TIERS[0].r, 'a small piece can rest nearer the wall (smaller flush limit)');
 
 // --- 10. Supernova: an in-run, earned clear (no meta-progression) --------
 C.reset(11);

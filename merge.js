@@ -445,14 +445,11 @@
   function moveCurrent(x) {
     if (!world.current) return;
     const r = TIERS[world.current.tier].r;
-    // Map the full field width of pointer travel onto the legal centre range
-    // [r, FIELD_W-r]. So dragging to the very screen edge always lands the
-    // piece flush against the wall regardless of its size, and dead-centre
-    // stays dead-centre — you aim where the piece's *centre* should point and
-    // the edges resolve themselves, instead of a big piece refusing to reach
-    // the wall until your finger is a radius short of it.
-    const f = Math.max(0, Math.min(FIELD_W, x)) / FIELD_W;
-    world.current.x = r + f * (FIELD_W - 2 * r);
+    // The aim line tracks the pointer 1:1 — the piece's centre goes exactly
+    // where you point, clamped only so the body can't rest past a wall (its
+    // edge sits flush against the wall at the extremes). No size-dependent
+    // scaling: a big piece and a small piece both follow your finger the same.
+    world.current.x = Math.max(r, Math.min(FIELD_W - r, x));
   }
 
   function dropCurrent() {
