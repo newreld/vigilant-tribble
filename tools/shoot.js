@@ -28,6 +28,8 @@ const VIEWS = [
 async function playDrops(page, name) {
   const booted = await page.evaluate(() => !!window.__cosmic);
   if (!booted) throw new Error('window.__cosmic not available');
+  // dismiss the home/splash screen so the actual gameplay (HUD + framed field) shows
+  await page.evaluate(() => { const s = document.getElementById('splash'); if (s) s.classList.add('hidden'); });
   // seed with a fixed value for reproducible screenshots
   await page.evaluate(() => window.__cosmic.reset(0xdeadbeef));
   for (let i = 0; i < 20; i++) {
@@ -75,6 +77,8 @@ async function playDrops(page, name) {
       const booted = await page.evaluate(() => !!window.__cosmic);
       if (!booted) throw new Error('window.__cosmic not available after boot');
 
+      // dismiss the home/splash screen so it doesn't overlap the game-over card
+      await page.evaluate(() => { const s = document.getElementById('splash'); if (s) s.classList.add('hidden'); });
       // Drop some pieces first so the field isn't empty behind the overlay
       await page.evaluate(() => window.__cosmic.reset(42));
       for (let i = 0; i < 12; i++) {
