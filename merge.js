@@ -829,12 +829,15 @@
   }
 
   // ---- layout / responsive scale ------------------------------------------
+  const FIELD_MARGIN = 12; // css px of breathing room between field and canvas edge
   let scale = 1, offX = 0, offY = 0;
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const availW = canvas.clientWidth, availH = canvas.clientHeight;
     canvas.width = availW * dpr; canvas.height = availH * dpr;
-    scale = Math.min(availW / FIELD_W, availH / FIELD_H);
+    // inset the field so it never touches the canvas edge — the margin frames
+    // it and leaves room for the corner rounding, border and drop shadow.
+    scale = Math.min((availW - 2 * FIELD_MARGIN) / FIELD_W, (availH - 2 * FIELD_MARGIN) / FIELD_H);
     offX = (availW - FIELD_W * scale) / 2;
     offY = (availH - FIELD_H * scale) / 2;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1094,12 +1097,33 @@
     ctx.restore();
   }
 
+  function roundRectPath(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
   function render() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     ctx.clearRect(0, 0, w, h);
     const sx = (Math.random() - 0.5) * shake, sy = (Math.random() - 0.5) * shake;
+    // the field is a rounded panel inset from the canvas edge: a drop shadow
+    // lifts it off the page, a clip keeps its contents inside the rounding,
+    // and a hairline border (stroked after) defines the edge for contrast.
+    const fx = offX + sx, fy = offY + sy, fw = FIELD_W * scale, fh = FIELD_H * scale, fr = 16;
     ctx.save();
-    ctx.translate(offX + sx, offY + sy); ctx.scale(scale, scale);
+    ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 7;
+    roundRectPath(ctx, fx, fy, fw, fh, fr);
+    ctx.fillStyle = '#100a16'; ctx.fill();
+    ctx.restore();
+    ctx.save();
+    roundRectPath(ctx, fx, fy, fw, fh, fr);
+    ctx.clip();
+    ctx.translate(fx, fy); ctx.scale(scale, scale);
 
     // field background: deep-space gradient + soft side vignette
     if (fieldGrad) {
@@ -1256,6 +1280,9 @@
     }
 
     ctx.restore();
+    // hairline border around the field panel (drawn after the clip is released)
+    roundRectPath(ctx, fx, fy, fw, fh, fr);
+    ctx.strokeStyle = 'rgba(241,230,208,0.14)'; ctx.lineWidth = 1; ctx.stroke();
 
     shake *= 0.85; if (shake < 0.3) shake = 0;
 
