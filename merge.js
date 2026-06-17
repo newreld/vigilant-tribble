@@ -1116,28 +1116,28 @@
       ctx.restore();
     }
     // exclusion zone — the strip above the danger line is "no resting allowed"
-    // territory. Rather than a thin rule, shade the whole zone as a darker
-    // ceiling so it reads as off-limits ground the pile must stay under; its
-    // lower edge IS the danger line. Warms to red as the grace timer ticks.
+    // territory, marked by a distinct background (a faint warm wash) rather
+    // than a hard rule. Its lower edge carries only a fine light hairline.
+    // The whole zone warms to red as the grace timer ticks.
     const danger = world.overTimer > 0.05;
     if (danger && !prevDanger) blip(55, 0.25, 'sine', 0.07); // low warning thud on onset
     prevDanger = danger;
     try {
       const zoneGrad = ctx.createLinearGradient(0, 0, 0, DANGER_Y);
       if (danger) {
-        zoneGrad.addColorStop(0, 'rgba(210,74,44,0.34)');
-        zoneGrad.addColorStop(0.7, 'rgba(210,74,44,0.16)');
+        zoneGrad.addColorStop(0, 'rgba(210,74,44,0.30)');
+        zoneGrad.addColorStop(0.7, 'rgba(210,74,44,0.14)');
         zoneGrad.addColorStop(1, 'rgba(210,74,44,0.05)');
       } else {
-        zoneGrad.addColorStop(0, 'rgba(12,8,15,0.42)');
-        zoneGrad.addColorStop(0.7, 'rgba(12,8,15,0.16)');
-        zoneGrad.addColorStop(1, 'rgba(12,8,15,0.03)');
+        zoneGrad.addColorStop(0, 'rgba(250,241,222,0.13)');
+        zoneGrad.addColorStop(0.7, 'rgba(250,241,222,0.06)');
+        zoneGrad.addColorStop(1, 'rgba(250,241,222,0.02)');
       }
       ctx.fillStyle = zoneGrad;
       ctx.fillRect(0, 0, FIELD_W, DANGER_Y);
-      // a crisp lower edge so the boundary line is unmistakable
-      ctx.fillStyle = danger ? 'rgba(210,74,44,0.85)' : 'rgba(180,150,120,0.3)';
-      ctx.fillRect(0, DANGER_Y - 1, FIELD_W, 1.5);
+      // fine light hairline at the lower edge
+      ctx.fillStyle = danger ? 'rgba(210,74,44,0.7)' : 'rgba(250,241,222,0.28)';
+      ctx.fillRect(0, DANGER_Y - 0.5, FIELD_W, 1);
     } catch (_) {}
     // danger vignette — red edge bleed builds up as the grace timer ticks
     if (danger) {
@@ -1204,11 +1204,11 @@
         ctx.setLineDash([]); ctx.globalAlpha = 1;
       }
       drawBody(world.current.x, ghostY, world.current.tier, true);
-      // aim guide — drawn as actual dots (not a dashed stroke, which reads
-      // as a thin rule) so the drop line feels lighter, more like a sight.
-      ctx.fillStyle = 'rgba(255,255,255,0.22)';
-      for (let yy = ghostY + 5; yy < FIELD_H; yy += 9) {
-        ctx.beginPath(); ctx.arc(world.current.x, yy, 1.1, 0, Math.PI * 2); ctx.fill();
+      // aim guide — fine, closely-spaced dots so the drop line reads as a
+      // delicate sight rather than a heavy rule.
+      ctx.fillStyle = 'rgba(255,255,255,0.26)';
+      for (let yy = ghostY + 5; yy < FIELD_H; yy += 6) {
+        ctx.beginPath(); ctx.arc(world.current.x, yy, 0.7, 0, Math.PI * 2); ctx.fill();
       }
     }
 
