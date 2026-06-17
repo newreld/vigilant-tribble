@@ -6,14 +6,14 @@
  * are cache-first since they never change. Bump CACHE on any strategy change to
  * evict stale entries from existing installs.
  */
-const CACHE = 'cosmic-v3';
+const CACHE = 'cosmic-v4';
 const CORE = [
   './',
   './index.html',
   './merge.css',
   './merge.js',
   './icon.svg',
-  'https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap',
+  'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap',
 ];
 
 self.addEventListener('install', e => {

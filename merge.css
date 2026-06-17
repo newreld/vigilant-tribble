@@ -1,6 +1,6 @@
 /* COSMIC MERGE — mission-control / 1970s-NASA-poster direction.
  * Warm ink + marigold + dusty teal + cream. No glassmorphism, no glow haze,
- * no neon-on-navy. Type: Big Shoulders Display (identity) + IBM Plex Mono (data).
+ * no neon-on-navy. Type: IBM Plex Sans Condensed (identity) + IBM Plex Mono (data).
  * Grain overlay + orbital-ring motif. See docs/DESIGN-TELLS.md. */
 :root {
   --ink: #0c080f;
@@ -12,7 +12,7 @@
   --marigold-dim: #c9692a;
   --teal: #4bb39c;        /* secondary accent */
   --brick: #d24a2c;       /* danger */
-  --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
@@ -65,7 +65,7 @@ body {
   gap: clamp(6px, 2vw, 12px); padding: 12px clamp(10px, 4vw, 16px) 4px;
 }
 .brand {
-  font-family: var(--display); font-weight: 800; font-size: clamp(15px, 4.8vw, 24px);
+  font-family: var(--display); font-weight: 700; font-size: clamp(15px, 4.8vw, 24px);
   letter-spacing: .5px; line-height: .9; color: var(--paper);
   display: flex; align-items: center; gap: clamp(5px, 1.8vw, 9px);
   min-width: 0;
@@ -173,14 +173,14 @@ body {
   animation: rise .24s cubic-bezier(.2,.7,.2,1) both;
 }
 .splash-title {
-  font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; font-weight: 700;
+  font-family: var(--display); font-weight: 700;
   font-size: clamp(60px, 22vw, 84px); line-height: .9; color: var(--paper);
 }
 .splash-sub {
   font-family: var(--mono); font-size: clamp(13px, 3.6vw, 14px); line-height: 1.5;
   color: var(--muted); margin-top: 26px;
 }
-#splash-start, #splash-daily {
+#splash-start, #splash-daily, #splash-chart {
   width: 172px; max-width: 70vw; box-sizing: border-box; cursor: pointer; border-radius: 9px;
   font-family: var(--mono); text-align: center;
   box-shadow: 0 3px 10px rgba(0,0,0,.15);
@@ -191,12 +191,12 @@ body {
   transition: background .1s;
 }
 #splash-start:hover { background: #ff954a; }
-#splash-daily {
+#splash-daily, #splash-chart {
   margin-top: 14px; padding: 16px 0; border: 1px solid rgba(194,178,156,.5); background: none;
   font-weight: 400; font-size: 12px; letter-spacing: 1px; color: var(--muted);
   transition: color .12s, border-color .12s;
 }
-#splash-daily:hover { color: var(--paper); border-color: var(--muted); }
+#splash-daily:hover, #splash-chart:hover { color: var(--paper); border-color: var(--muted); }
 .splash-footer {
   position: relative; z-index: 1; display: flex; gap: 48px;
   padding-top: 18px; border-top: 1px solid #42304E;
@@ -223,7 +223,7 @@ button.splash-stat:hover .splash-stat-val { color: var(--paper); }
   animation: rise .18s cubic-bezier(.2,.7,.2,1) both;
 }
 @keyframes rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
-.go-title { font-family: var(--display); font-weight: 800; font-size: 34px; letter-spacing: 1px; color: var(--paper); }
+.go-title { font-family: var(--display); font-weight: 700; font-size: 34px; letter-spacing: 1px; color: var(--paper); }
 .go-label { font-size: 8px; letter-spacing: 3px; color: var(--muted); margin-top: 20px; }
 .go-final { font-family: var(--mono); font-weight: 600; font-size: 60px; line-height: 1; color: var(--marigold); font-variant-numeric: tabular-nums; }
 #new-best {
@@ -297,7 +297,7 @@ button.splash-stat:hover .splash-stat-val { color: var(--paper); }
   animation: rise .18s cubic-bezier(.2,.7,.2,1) both;
 }
 .sc-head { display: flex; align-items: center; gap: 12px; }
-.sc-title { font-family: var(--display); font-weight: 800; font-size: 24px; letter-spacing: 1px; color: var(--paper); }
+.sc-title { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: 1px; color: var(--paper); }
 .sc-balance { margin-left: auto; font-size: 12px; letter-spacing: 1px; color: var(--teal); font-variant-numeric: tabular-nums; }
 #close-chart {
   background: none; border: 1px solid var(--line); border-radius: 7px; cursor: pointer;

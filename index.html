@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="merge.css" />
 </head>
 <body>
@@ -67,16 +67,17 @@
       <p class="splash-sub">Drop worlds.<br>Stack them.<br>Collapse a galaxy.</p>
       <button id="splash-start" type="button">START</button>
       <button id="splash-daily" type="button">Daily Challenge</button>
+      <button id="splash-chart" type="button">Star Chart</button>
     </div>
     <div class="splash-footer">
       <div class="splash-stat">
         <span class="splash-stat-label best">Your best</span>
         <span class="splash-stat-val best" id="splash-best-val">0</span>
       </div>
-      <button class="splash-stat" id="splash-chart" type="button" aria-label="Open Star Chart">
+      <div class="splash-stat">
         <span class="splash-stat-label">Star dust</span>
         <span class="splash-stat-val"><span id="splash-balance">0</span> <i class="dust-mark"></i></span>
-      </button>
+      </div>
     </div>
   </div>
 
