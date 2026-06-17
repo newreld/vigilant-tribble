@@ -252,18 +252,17 @@
   // run is never unfair); the ramp matters only once a run runs long.
   const DROP_POOLS = [
     { at: 0,   pool: [0, 0, 0, 0, 1, 1, 1, 2, 2, 3] },
-    { at: 15,  pool: [0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4] },
-    { at: 40,  pool: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4] },
-    { at: 70,  pool: [0, 1, 1, 2, 2, 3, 3, 4, 4, 5] },
-    { at: 110, pool: [0, 1, 2, 2, 3, 3, 4, 4, 5, 5] },
-    { at: 160, pool: [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6] },
+    { at: 12,  pool: [0, 0, 0, 1, 1, 2, 2, 3, 3, 4] },
+    { at: 28,  pool: [0, 0, 1, 1, 2, 2, 3, 3, 4, 5] },
+    { at: 48,  pool: [0, 1, 1, 2, 2, 3, 3, 4, 4, 5] },
+    { at: 75,  pool: [1, 1, 2, 2, 3, 3, 4, 4, 5, 6] },
+    { at: 130, pool: [1, 2, 2, 3, 3, 4, 4, 5, 6, 7] },
   ];
   function dropPool() {
     let pool = DROP_POOLS[0].pool;
     for (const p of DROP_POOLS) if (world.drops >= p.at) pool = p.pool;
     return pool;
   }
-  const EDGE_SNAP = 26; // field units near a wall that auto-resolve to flush placement
   const SCORE_MILESTONES = [[1000,'KILO-MERGE'],[5000,'MEGA-MERGE'],[10000,'GIGA-MERGE'],[25000,'TERA-MERGE'],[50000,'PETA-MERGE'],[100000,'EXA-MERGE']];
 
   // Daily seed: deterministic from YYYY-MM-DD so every player gets the same run today.
@@ -443,13 +442,14 @@
   function moveCurrent(x) {
     if (!world.current) return;
     const r = TIERS[world.current.tier].r;
-    // edge-snap assist: aiming anywhere within EDGE_SNAP of a wall resolves to
-    // flush-against-the-wall, regardless of piece size or pointer precision —
-    // without it, a big piece's reachable "flush" zone is a tiny sliver near
-    // the literal screen edge, which is hard to hit on a touchscreen.
-    if (x <= EDGE_SNAP) x = r;
-    else if (x >= FIELD_W - EDGE_SNAP) x = FIELD_W - r;
-    world.current.x = Math.max(r, Math.min(FIELD_W - r, x));
+    // Map the full field width of pointer travel onto the legal centre range
+    // [r, FIELD_W-r]. So dragging to the very screen edge always lands the
+    // piece flush against the wall regardless of its size, and dead-centre
+    // stays dead-centre — you aim where the piece's *centre* should point and
+    // the edges resolve themselves, instead of a big piece refusing to reach
+    // the wall until your finger is a radius short of it.
+    const f = Math.max(0, Math.min(FIELD_W, x)) / FIELD_W;
+    world.current.x = r + f * (FIELD_W - 2 * r);
   }
 
   function dropCurrent() {
@@ -1115,26 +1115,29 @@
       ctx.fillStyle = META_BY_ID[meta.theme].tint; ctx.fillRect(0, 0, FIELD_W, FIELD_H);
       ctx.restore();
     }
-    // danger threshold — a soft tinted band straddling the line, not a stroke;
-    // reads as part of the field lighting rather than a drawn-on dashed rule,
-    // and warms from dusty neutral to red as the grace timer ticks.
+    // exclusion zone — the strip above the danger line is "no resting allowed"
+    // territory. Rather than a thin rule, shade the whole zone as a darker
+    // ceiling so it reads as off-limits ground the pile must stay under; its
+    // lower edge IS the danger line. Warms to red as the grace timer ticks.
     const danger = world.overTimer > 0.05;
     if (danger && !prevDanger) blip(55, 0.25, 'sine', 0.07); // low warning thud on onset
     prevDanger = danger;
-    const bandTop = DANGER_Y - 20, bandBot = DANGER_Y + 9;
     try {
-      const bandGrad = ctx.createLinearGradient(0, bandTop, 0, bandBot);
+      const zoneGrad = ctx.createLinearGradient(0, 0, 0, DANGER_Y);
       if (danger) {
-        bandGrad.addColorStop(0, 'rgba(210,74,44,0)');
-        bandGrad.addColorStop(0.6, 'rgba(210,74,44,0.4)');
-        bandGrad.addColorStop(1, 'rgba(210,74,44,0)');
+        zoneGrad.addColorStop(0, 'rgba(210,74,44,0.34)');
+        zoneGrad.addColorStop(0.7, 'rgba(210,74,44,0.16)');
+        zoneGrad.addColorStop(1, 'rgba(210,74,44,0.05)');
       } else {
-        bandGrad.addColorStop(0, 'rgba(180,150,120,0)');
-        bandGrad.addColorStop(0.6, 'rgba(180,150,120,0.18)');
-        bandGrad.addColorStop(1, 'rgba(180,150,120,0)');
+        zoneGrad.addColorStop(0, 'rgba(12,8,15,0.42)');
+        zoneGrad.addColorStop(0.7, 'rgba(12,8,15,0.16)');
+        zoneGrad.addColorStop(1, 'rgba(12,8,15,0.03)');
       }
-      ctx.fillStyle = bandGrad;
-      ctx.fillRect(0, bandTop, FIELD_W, bandBot - bandTop);
+      ctx.fillStyle = zoneGrad;
+      ctx.fillRect(0, 0, FIELD_W, DANGER_Y);
+      // a crisp lower edge so the boundary line is unmistakable
+      ctx.fillStyle = danger ? 'rgba(210,74,44,0.85)' : 'rgba(180,150,120,0.3)';
+      ctx.fillRect(0, DANGER_Y - 1, FIELD_W, 1.5);
     } catch (_) {}
     // danger vignette — red edge bleed builds up as the grace timer ticks
     if (danger) {

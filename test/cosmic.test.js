@@ -126,18 +126,23 @@ for (let i = 0; i < 600; i++) { const t = C.pickTier(); lateMax = Math.max(lateM
 ok(lateMax > midMax, 'a very long run (200+ drops) keeps escalating past the mid-run pool');
 ok(lateMin >= 1, 'a very long run stops handing out the trivial tier-0 filler entirely');
 
-// --- 9c. edge-snap aim assist: aiming near a wall resolves flush ----------
-// Without this, a big piece's "flush against the wall" zone is a tiny sliver
-// right at the literal screen edge — hard to hit by touch. Aiming anywhere
-// within EDGE_SNAP of a wall should resolve to fully flush regardless of size.
+// --- 9c. edge aim mapping: pointer travel spans the legal centre range -----
+// The full screen width of pointer travel maps onto [r, FIELD_W-r], so
+// dragging to the very edge always lands a piece flush against the wall no
+// matter its size, while dead-centre stays dead-centre.
 C.reset(8);
+const bigR = C.TIERS[C.MAX_TIER].r;
 C.world.current = { tier: C.MAX_TIER, x: C.FIELD_W / 2 };
-C.moveCurrent(10);
-ok(C.world.current.x === C.TIERS[C.MAX_TIER].r, 'aiming near the left wall snaps a big piece flush left');
-C.moveCurrent(C.FIELD_W - 10);
-ok(C.world.current.x === C.FIELD_W - C.TIERS[C.MAX_TIER].r, 'aiming near the right wall snaps a big piece flush right');
+C.moveCurrent(0);
+ok(C.world.current.x === bigR, 'dragging to the left screen edge lands a big piece flush left');
+C.moveCurrent(C.FIELD_W);
+ok(C.world.current.x === C.FIELD_W - bigR, 'dragging to the right screen edge lands a big piece flush right');
 C.moveCurrent(C.FIELD_W / 2);
-ok(C.world.current.x === C.FIELD_W / 2, 'aiming mid-field is unaffected by the edge-snap assist');
+ok(C.world.current.x === C.FIELD_W / 2, 'aiming mid-field keeps the piece dead-centre');
+// a small piece reaches flush at the same finger position a big one does
+C.world.current = { tier: 0, x: C.FIELD_W / 2 };
+C.moveCurrent(0);
+ok(C.world.current.x === C.TIERS[0].r, 'a small piece is also flush left at the same edge-most aim');
 
 // --- 10. Supernova: an in-run, earned clear (no meta-progression) --------
 C.reset(11);

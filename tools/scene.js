@@ -42,9 +42,13 @@ for (let y = 0; y < Hh; y++) {
 // stars
 let s = seed * 99 + 1; const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
 for (let i = 0; i < 160; i++) { const x = (rnd() * W) | 0, y = (rnd() * Hh) | 0, b = 80 + rnd() * 150, j = (y * W + x) * 3; fb[j] = b; fb[j + 1] = b; fb[j + 2] = b * 1.05; }
-// danger line (dashed)
+// exclusion zone — darker ceiling above the danger line + a crisp lower edge
 const dy = Math.round(DANGER_Y * SC);
-for (let x = 0; x < W; x++) { if (Math.floor(x / 7) % 2) continue; for (let o = -1; o <= 1; o++) { const i = ((dy + o) * W + x) * 3; fb[i] = mix([fb[i], 0, 0], [150, 170, 255], 1)[0]; fb[i + 1] = 170 * 0.7; fb[i + 2] = 255 * 0.6; } }
+for (let y = 0; y < dy; y++) {
+  const k = 1 - y / dy, a = 0.42 * k * k; // strongest at the very top, fading down
+  for (let x = 0; x < W; x++) { const i = (y * W + x) * 3; fb[i] *= (1 - a); fb[i + 1] *= (1 - a); fb[i + 2] *= (1 - a); }
+}
+for (let x = 0; x < W; x++) { for (let o = -1; o <= 1; o++) { const i = ((dy + o) * W + x) * 3; fb[i] = 108; fb[i + 1] = 90; fb[i + 2] = 72; } }
 
 function drawBody(tier, cx, cy, R) {
   const ext = Math.ceil(R * GLOW_MAX);
