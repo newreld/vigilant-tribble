@@ -233,9 +233,9 @@
 
 
   // ---- field + physics constants ------------------------------------------
-  const FIELD_W = 360, FIELD_H = 500;
+  const FIELD_W = 360, FIELD_H = 460;
   const SPAWN_Y = 48;          // y of the hovering current piece
-  const DANGER_Y = 108;        // resting above this for too long = game over
+  const DANGER_Y = 120;        // resting above this for too long = game over
   const GRAVITY = 2200;        // units / s^2
   const RESTITUTION = 0.18;    // bounciness
   const DAMP = 0.992;          // velocity damping per substep
@@ -243,7 +243,7 @@
   const SOLVER_ITERS = 6;
   const MERGE_OVERLAP = 1.02;  // merge on contact (solver rests bodies at ~touching)
   const DROP_COOLDOWN = 0.35;  // s between drops
-  const OVER_GRACE = 1.3;      // s a body may sit above the danger line
+  const OVER_GRACE = 0.9;      // s a body may sit above the danger line
   // Difficulty ramp: a fixed 0-3 pool the whole run means center-stacking
   // never gets harder, because merges keep consolidating away the clutter —
   // a long run should keep demanding more of the field. The pool widens with
@@ -316,7 +316,7 @@
   // saved, bought, or gated behind money. When ready, the player fires it to
   // vaporize the small debris (Asteroids + Comets) that clutters the field —
   // serving the core fantasy: a good merge/clear makes the field emptier.
-  const CHARGE_MAX = 18;
+  const CHARGE_MAX = 30;
   function addCharge(n) {
     if (world.superReady) return;          // don't overfill a ready meter
     world.charge = Math.min(CHARGE_MAX, world.charge + n);
@@ -332,7 +332,9 @@
     world.score += cleared * 30;
     if (world.score > world.best) world.best = world.score;
     world.charge = 0; world.superReady = false;
-    world.overTimer = 0; // a clear relieves the danger line
+    // NOTE: no longer resets world.overTimer — Supernova clears small debris
+    // (which can help indirectly) but is not a free "cancel the danger countdown"
+    // button, which made late-game danger trivial to escape.
     world.events.push({ type: 'supernova', cleared });
     return true;
   }
