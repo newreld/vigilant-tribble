@@ -250,13 +250,16 @@
   // world.drops, gradually mixing in bigger bodies that don't tuck into a
   // tidy single column. Early drops stay exactly the old fixed pool (a fresh
   // run is never unfair); the ramp matters only once a run runs long.
+  // Every pool keeps at least one tier-0 so a stranded lone asteroid can
+  // always eventually be paired off and cleared — its weight just thins out
+  // over a run as bigger bodies crowd in, rather than vanishing entirely.
   const DROP_POOLS = [
     { at: 0,   pool: [0, 0, 0, 0, 1, 1, 1, 2, 2, 3] },
     { at: 12,  pool: [0, 0, 0, 1, 1, 2, 2, 3, 3, 4] },
     { at: 28,  pool: [0, 0, 1, 1, 2, 2, 3, 3, 4, 5] },
     { at: 48,  pool: [0, 1, 1, 2, 2, 3, 3, 4, 4, 5] },
-    { at: 75,  pool: [1, 1, 2, 2, 3, 3, 4, 4, 5, 6] },
-    { at: 130, pool: [1, 2, 2, 3, 3, 4, 4, 5, 6, 7] },
+    { at: 75,  pool: [0, 1, 2, 2, 3, 3, 4, 4, 5, 6] },
+    { at: 130, pool: [0, 1, 2, 3, 3, 4, 4, 5, 6, 7] },
   ];
   function dropPool() {
     let pool = DROP_POOLS[0].pool;

@@ -113,18 +113,21 @@ ok(allLow, 'only low tiers (0-3) ever spawn — you build up, you are never hand
 // fresh run (low drops) stays exactly the gentle low-tier pool above.
 C.reset(8);
 C.world.drops = 0;
-let earlyMax = 0;
-for (let i = 0; i < 200; i++) earlyMax = Math.max(earlyMax, C.pickTier());
+let earlyMax = 0, earlyZeros = 0;
+for (let i = 0; i < 600; i++) { const t = C.pickTier(); earlyMax = Math.max(earlyMax, t); if (t === 0) earlyZeros++; }
 ok(earlyMax <= 3, 'a fresh run (drops=0) still only ever sees tiers 0-3');
 C.world.drops = 100;
 let midMax = 0;
 for (let i = 0; i < 400; i++) midMax = Math.max(midMax, C.pickTier());
 ok(midMax > earlyMax, 'a run 100 drops in already widens the spawn pool to bigger tiers');
 C.world.drops = 200;
-let lateMax = 0, lateMin = 99;
-for (let i = 0; i < 600; i++) { const t = C.pickTier(); lateMax = Math.max(lateMax, t); lateMin = Math.min(lateMin, t); }
+let lateMax = 0, lateZeros = 0;
+for (let i = 0; i < 600; i++) { const t = C.pickTier(); lateMax = Math.max(lateMax, t); if (t === 0) lateZeros++; }
 ok(lateMax > midMax, 'a very long run (200+ drops) keeps escalating past the mid-run pool');
-ok(lateMin >= 1, 'a very long run stops handing out the trivial tier-0 filler entirely');
+// tier-0 must never vanish — a lone stranded asteroid always needs a partner
+// to clear, so the pool keeps a trickle of them forever, just rarer over time.
+ok(lateZeros > 0, 'tier-0 still spawns deep in a run so a lone asteroid is always clearable');
+ok(earlyZeros > lateZeros, 'but tier-0 thins out over a run as bigger bodies crowd in');
 
 // --- 9c. edge aim mapping: pointer travel spans the legal centre range -----
 // The full screen width of pointer travel maps onto [r, FIELD_W-r], so
