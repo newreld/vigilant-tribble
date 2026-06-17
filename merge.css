@@ -138,68 +138,77 @@ body {
 }
 #game { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
 
-/* splash / home — a 1970s-NASA-poster title plate: hard-left wordmark, one
-   editorial eyebrow, the orbital-ring motif bleeding off a corner. Asymmetric
-   on purpose; no centred hero, no stacked pills, no self-narrating copy. */
+/* splash / home — NASA-poster title plate (design refined in Figma): hard-left
+   condensed wordmark, one editorial eyebrow, orbital-ring motif bleeding off the
+   top-right, primary START + outlined Daily Challenge, and a footer of stats. */
 #splash {
   position: fixed; inset: 0; z-index: 10; overflow: hidden;
-  display: flex; align-items: center;
-  background: radial-gradient(120% 90% at 82% -12%, #43314f 0%, #271a30 46%, #100a16 100%);
+  display: flex; flex-direction: column;
+  padding: clamp(40px, 6vh, 56px) 28px clamp(28px, 4.5vh, 44px);
+  background: linear-gradient(180deg, #43314F 0%, #271A30 49.52%, #100A16 100%);
 }
-/* signature motif: concentric orbital rings, off-centre, bleeding off the corner */
-.splash-rings {
-  position: absolute; top: -24vmin; right: -24vmin;
-  width: 88vmin; height: 88vmin; border-radius: 50%; pointer-events: none;
-  border: 1.5px solid rgba(240,136,62,.45);
-}
+/* signature motif: concentric orbital rings + dot, bleeding off the top-right */
+.splash-rings { position: absolute; top: 0; right: 0; width: 0; height: 0; pointer-events: none; }
 .splash-rings::before {
-  content: ''; position: absolute; inset: 12vmin; border-radius: 50%;
-  border: 1px solid rgba(75,179,156,.38);
+  content: ''; position: absolute; width: 135vw; height: 135vw; max-width: 560px; max-height: 560px;
+  right: -33vw; top: -55vw; border-radius: 50%; border: 1.5px solid rgba(240,136,62,.45);
 }
 .splash-rings::after {
-  content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%;
-  background: var(--marigold); top: -8px; left: 32%;
-  box-shadow: 0 0 0 5px #1a1222; /* punch-out so the dot reads as orbiting the ring */
-}
-.splash-inner {
-  position: relative; z-index: 1;
-  padding: 0 24px 0 clamp(26px, 8vw, 90px); max-width: 600px;
-  animation: rise .24s cubic-bezier(.2,.7,.2,1) both;
+  content: ''; position: absolute; width: 83vw; height: 83vw; max-width: 345px; max-height: 345px;
+  right: -10vw; top: -28vw; border-radius: 50%; border: 1px solid rgba(75,179,156,.38);
 }
 .splash-eyebrow {
+  position: relative; z-index: 1;
   font-family: var(--mono); font-size: 11px; font-weight: 600;
-  letter-spacing: 6px; color: var(--marigold); margin-bottom: 16px;
+  letter-spacing: 6px; color: var(--marigold);
+}
+/* the orbiting dot, anchored near the rings' top-right */
+.splash-eyebrow::after {
+  content: ''; position: absolute; top: 0; right: 4px; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--marigold);
+}
+.splash-main {
+  position: relative; z-index: 1; margin-top: auto; margin-bottom: auto;
+  display: flex; flex-direction: column; align-items: flex-start;
+  animation: rise .24s cubic-bezier(.2,.7,.2,1) both;
 }
 .splash-title {
-  font-family: var(--display); font-weight: 800;
-  font-size: clamp(56px, 17vw, 104px); line-height: .82; letter-spacing: 1px;
-  color: var(--paper);
+  font-family: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; font-weight: 700;
+  font-size: clamp(60px, 22vw, 84px); line-height: .9; color: var(--paper);
 }
 .splash-sub {
-  font-family: var(--mono); font-size: clamp(12px, 3.4vw, 15px); line-height: 1.5;
-  color: var(--muted); margin-top: 22px; max-width: 24ch;
+  font-family: var(--mono); font-size: clamp(13px, 3.6vw, 14px); line-height: 1.5;
+  color: var(--muted); margin-top: 26px;
 }
-.splash-actions { margin-top: 38px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+#splash-start, #splash-daily {
+  width: 172px; max-width: 70vw; box-sizing: border-box; cursor: pointer; border-radius: 9px;
+  font-family: var(--mono); text-align: center;
+  box-shadow: 0 3px 10px rgba(0,0,0,.15);
+}
 #splash-start {
-  border: none; cursor: pointer; padding: 16px 54px; border-radius: 9px;
-  font-family: var(--mono); font-weight: 700; font-size: 16px; letter-spacing: 4px;
-  color: #1a0f08; background: var(--marigold); box-shadow: 0 4px 0 var(--marigold-dim);
-  transition: transform .04s, box-shadow .04s, background .1s;
+  margin-top: 32px; padding: 16px 0; border: 1px solid rgba(255,255,255,.25);
+  font-weight: 700; font-size: 16px; letter-spacing: 4px; color: #1a0f08; background: var(--marigold);
+  transition: background .1s;
 }
 #splash-start:hover { background: #ff954a; }
-#splash-start:active { transform: translateY(4px); box-shadow: 0 0 0 var(--marigold-dim); }
-.splash-secondary { display: flex; gap: 24px; flex-wrap: wrap; }
-#splash-daily, #splash-chart {
-  background: none; border: none; cursor: pointer; padding: 3px 0;
-  font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px; color: var(--muted);
-  border-bottom: 1px solid transparent; transition: color .12s, border-color .12s;
-  display: inline-flex; align-items: center; gap: 4px;
+#splash-daily {
+  margin-top: 14px; padding: 16px 0; border: 1px solid rgba(194,178,156,.5); background: none;
+  font-weight: 400; font-size: 12px; letter-spacing: 1px; color: var(--muted);
+  transition: color .12s, border-color .12s;
 }
-#splash-daily:hover, #splash-chart:hover { color: var(--paper); border-color: var(--marigold); }
-.splash-best {
-  margin-top: 44px; font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--muted);
+#splash-daily:hover { color: var(--paper); border-color: var(--muted); }
+.splash-footer {
+  position: relative; z-index: 1; display: flex; gap: 48px;
+  padding-top: 18px; border-top: 1px solid #42304E;
 }
-.splash-best b { color: var(--teal); font-weight: 600; font-size: 15px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.splash-stat { display: flex; flex-direction: column; gap: 6px; background: none; border: none; padding: 0; text-align: left; cursor: default; }
+button.splash-stat { cursor: pointer; }
+.splash-stat-label { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.splash-stat-label.best { color: var(--teal); }
+.splash-stat-val { font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; }
+.splash-stat-val.best { color: var(--teal); }
+button.splash-stat:hover .splash-stat-label,
+button.splash-stat:hover .splash-stat-val { color: var(--paper); }
 
 /* game over — solid, quiet, on-brand. No blur, no glow, no big soft shadow. */
 #gameover {

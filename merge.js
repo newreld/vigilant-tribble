@@ -1002,9 +1002,8 @@
   const elSplash = $('splash');
   function showSplash() {
     if (!elSplash) return;
-    const sb = $('splash-best'), sbv = $('splash-best-val'), sbal = $('splash-balance');
+    const sbv = $('splash-best-val'), sbal = $('splash-balance');
     if (sbv) sbv.textContent = meta.bestClassic.toLocaleString();
-    if (sb) sb.classList.toggle('hidden', !meta.bestClassic);
     if (sbal) sbal.textContent = Math.floor(meta.stardust).toLocaleString();
     elSplash.classList.remove('hidden');
   }
