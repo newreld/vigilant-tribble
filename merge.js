@@ -727,11 +727,11 @@
         nctx.drawImage(sp2.cv, w - sz2 - 1, (h - sz2) / 2 + 4, sz2, sz2);
         nctx.globalAlpha = 1;
       }
-      if (elNextName) elNextName.textContent = TIERS[world.next].name + ' · ' + TIERS[world.next2].name;
+      if (elNextRing) elNextRing.title = TIERS[world.next].name + ' · ' + TIERS[world.next2].name;
     } else {
       const sp = sprite(world.next);
       if (sp && sp.cv) { const sz = Math.min(w, h) * 0.96; nctx.drawImage(sp.cv, (w - sz) / 2, (h - sz) / 2, sz, sz); }
-      if (elNextName) elNextName.textContent = TIERS[world.next].name;
+      if (elNextRing) elNextRing.title = TIERS[world.next].name;
     }
   }
 
@@ -900,7 +900,7 @@
 
   // ---- Star Chart: spend stardust earned by playing -----------------------
   const scBalance = $('sc-balance'), scCosmetic = $('sc-cosmetic'), scModifier = $('sc-modifier'), scCodex = $('sc-codex');
-  const elGoStats = $('go-stats'), elNextName = $('next-name');
+  const elGoStats = $('go-stats'), elNextRing = $('next-ring');
   const elGoDailyBanner = $('go-daily'), elDailyBtn = $('daily-btn');
   const elDailyBadge = $('daily-badge'), elShareBtn = $('share-btn');
   const elGoStreak = $('go-streak');
@@ -984,6 +984,28 @@
     $('open-chart').addEventListener('click', openChart);
     $('close-chart').addEventListener('click', closeChart);
     elChart.addEventListener('click', e => { if (e.target === elChart) closeChart(); });
+  }
+
+  // ---- splash / home ------------------------------------------------------
+  const elSplash = $('splash');
+  function showSplash() {
+    if (!elSplash) return;
+    const sb = $('splash-best'), sbv = $('splash-best-val'), sbal = $('splash-balance');
+    if (sbv) sbv.textContent = meta.bestClassic.toLocaleString();
+    if (sb) sb.classList.toggle('hidden', !meta.bestClassic);
+    if (sbal) sbal.textContent = Math.floor(meta.stardust).toLocaleString();
+    elSplash.classList.remove('hidden');
+  }
+  function startFromSplash(daily) {
+    world.daily = !!daily;
+    reset(daily ? dailySeed() : undefined);
+    if (elSplash) elSplash.classList.add('hidden');
+    elOver.classList.add('hidden');
+  }
+  if (elSplash) {
+    $('splash-start').addEventListener('click', () => startFromSplash(false));
+    $('splash-daily').addEventListener('click', () => startFromSplash(true));
+    $('splash-chart').addEventListener('click', openChart);
   }
 
   // ---- consume sim events into juice ---------------------------------------
@@ -1227,17 +1249,17 @@
         ctx.beginPath(); ctx.arc(cx, landY, cr, 0, Math.PI * 2); ctx.stroke();
         ctx.setLineDash([]); ctx.globalAlpha = 1;
       }
-      drawBody(world.current.x, ghostY, world.current.tier, true);
-      // aim guide — a very fine 1,2 dotted hairline so the drop line reads as
-      // a delicate sight rather than a heavy rule.
+      // aim guide — a very fine 1,2 dotted hairline, drawn BEFORE the piece so
+      // the body sits in front of it (the line reads as a sight behind it).
       ctx.save();
       ctx.strokeStyle = 'rgba(255,255,255,0.26)';
       ctx.lineWidth = 0.8; ctx.setLineDash([1, 2]);
       ctx.beginPath();
-      ctx.moveTo(world.current.x, ghostY + 5);
+      ctx.moveTo(world.current.x, ghostY);
       ctx.lineTo(world.current.x, FIELD_H);
       ctx.stroke();
       ctx.restore();
+      drawBody(world.current.x, ghostY, world.current.tier, true);
     }
 
     // first-drop hint — vanishes the moment the player drops their first piece
@@ -1335,6 +1357,7 @@
   for (let t = 0; t < TIERS.length; t++) sprite(t); // pre-bake so first frames are instant
   reset();     // must run before drawNext so world.next is not null
   drawNext();
+  showSplash(); // start on the home screen; a run begins on START
   // sync mute button visual with persisted state
   if (muted) $('muteBtn').setAttribute('aria-pressed', 'true');
   requestAnimationFrame(loop);

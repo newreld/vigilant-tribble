@@ -74,25 +74,26 @@ body {
 .orbit { width: clamp(11px, 3vw, 15px); height: clamp(11px, 3vw, 15px); border: 1.5px solid var(--marigold); border-radius: 50%; position: relative; flex: none; }
 .orbit::after { content: ""; position: absolute; width: 4px; height: 4px; background: var(--teal); border-radius: 50%; top: -2px; left: 50%; }
 
-.hud-stats { display: flex; align-items: center; gap: clamp(8px, 2.5vw, 16px); flex: none; }
-.stat { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
-.hud-label { font-size: 8px; letter-spacing: 2.5px; color: var(--muted); margin-bottom: 3px; }
-.hud-value { font-size: clamp(19px, 6.2vw, 30px); font-weight: 600; color: var(--marigold); font-variant-numeric: tabular-nums; }
-.stat.secondary .hud-value { font-size: clamp(12px, 3.5vw, 16px); color: var(--muted); font-weight: 500; }
+/* all readouts share a bottom baseline so the data sits on one clean line;
+   labels float above each at their own height. */
+.hud-stats { display: flex; align-items: flex-end; gap: clamp(10px, 2.5vw, 18px); flex: none; }
+.stat { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; line-height: 1; }
+.hud-label { font-size: 8px; letter-spacing: 2.5px; color: var(--muted); }
+.hud-value { font-size: clamp(18px, 5vw, 26px); font-weight: 600; color: var(--marigold); font-variant-numeric: tabular-nums; }
+.stat.secondary .hud-value { font-size: clamp(13px, 3.6vw, 18px); color: var(--muted); font-weight: 500; }
 
-/* next-piece — framed by the orbital ring motif, with tier name below */
-.next-piece { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: none; }
+/* next-piece — same label-on-top block as the stats, content centred */
+.next-piece { align-items: center; }
 .next-ring {
-  width: clamp(34px, 9vw, 44px); height: clamp(34px, 9vw, 44px); border: 1px solid var(--line); border-radius: 50%;
+  width: clamp(30px, 7.5vw, 38px); height: clamp(30px, 7.5vw, 38px); border: 1px solid var(--line); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
-#next-canvas { width: clamp(28px, 7.5vw, 36px); height: clamp(28px, 7.5vw, 36px); display: block; }
-.next-name { font-size: 7px; letter-spacing: 1px; color: var(--muted); font-family: var(--mono); }
+#next-canvas { width: clamp(24px, 6vw, 30px); height: clamp(24px, 6vw, 30px); display: block; }
 
 #muteBtn {
   background: rgba(241,230,208,.06); color: var(--muted); border: 1.5px solid rgba(241,230,208,.4);
-  border-radius: 8px; width: clamp(30px, 8vw, 36px); height: clamp(30px, 8vw, 36px); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; width: clamp(30px, 7.5vw, 38px); height: clamp(30px, 7.5vw, 38px); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; align-self: flex-end;
   box-shadow: inset 0 -2px 0 rgba(0,0,0,.22);
   transition: color .12s, border-color .12s, background .12s; flex: none;
 }
@@ -136,6 +137,50 @@ body {
   min-height: 0; padding: 0 8px;
 }
 #game { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
+
+/* splash / home — same quiet card language; the entry point before a run */
+#splash {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(140% 100% at 50% -18%, #3a2942 0%, #221629 50%, #100a16 100%);
+  padding: 24px;
+}
+.splash-card {
+  width: min(360px, 100%); text-align: center;
+  animation: rise .22s cubic-bezier(.2,.7,.2,1) both;
+}
+.splash-brand {
+  font-family: var(--display); font-weight: 800; font-size: clamp(32px, 9vw, 44px);
+  letter-spacing: 1px; line-height: .95; color: var(--paper);
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.splash-brand .orbit { width: 18px; height: 18px; }
+.splash-tag { font-size: 11px; line-height: 1.6; letter-spacing: 1px; color: var(--muted); margin-top: 14px; }
+.splash-best { font-size: 10px; letter-spacing: 2px; color: var(--teal); margin-top: 18px; }
+.splash-best #splash-best-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+#splash-start {
+  display: block; width: 100%; margin: 24px auto 0; padding: 15px 0; border: none; border-radius: 9px;
+  font-family: var(--mono); font-weight: 600; font-size: 15px; letter-spacing: 3px; cursor: pointer;
+  color: #1a0f08; background: var(--marigold); box-shadow: 0 4px 0 var(--marigold-dim);
+  transition: transform .04s, box-shadow .04s, background .1s;
+}
+#splash-start:hover { background: #ff954a; }
+#splash-start:active { transform: translateY(4px); box-shadow: 0 0 0 var(--marigold-dim); }
+#splash-daily {
+  display: block; width: 100%; margin: 10px auto 0; padding: 12px 0; border-radius: 9px;
+  font-family: var(--mono); font-weight: 600; font-size: 12px; letter-spacing: 2px; cursor: pointer;
+  color: var(--teal); background: none; border: 1px solid var(--teal);
+  transition: background .1s, color .1s;
+}
+#splash-daily:hover { background: var(--teal); color: #07120f; }
+#splash-chart {
+  display: inline-flex; align-items: center; gap: 3px; margin: 14px auto 0;
+  padding: 9px 18px; border: 1px solid var(--line); border-radius: 8px; background: none;
+  font-family: var(--mono); font-weight: 500; font-size: 11px; letter-spacing: 2px; cursor: pointer;
+  color: var(--muted); transition: color .12s, border-color .12s;
+}
+#splash-chart:hover { color: var(--paper); border-color: var(--teal); }
+.splash-note { font-size: 9px; letter-spacing: 1.5px; color: var(--muted); margin-top: 20px; }
 
 /* game over — solid, quiet, on-brand. No blur, no glow, no big soft shadow. */
 #gameover {

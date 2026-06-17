@@ -30,11 +30,11 @@
         <span class="hud-label">BEST</span>
         <span class="hud-value" id="best">0</span>
       </div>
-      <div class="next-piece">
-        <div class="next-ring" title="Next">
+      <div class="stat next-piece">
+        <span class="hud-label">NEXT</span>
+        <div class="next-ring" id="next-ring" title="Next">
           <canvas id="next-canvas" width="52" height="52"></canvas>
         </div>
-        <span class="next-name" id="next-name"></span>
       </div>
       <button id="muteBtn" aria-label="Toggle sound" aria-pressed="false">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
@@ -57,6 +57,19 @@
   <main id="stage">
     <canvas id="game"></canvas>
   </main>
+
+  <!-- splash / home: explore the chart and start a run without losing first -->
+  <div id="splash">
+    <div class="splash-card">
+      <div class="splash-brand"><span class="orbit"></span>COSMIC&nbsp;MERGE</div>
+      <div class="splash-tag">Drop celestial bodies. Chain merges. Collapse stars.</div>
+      <div class="splash-best hidden" id="splash-best">BEST <span id="splash-best-val">0</span></div>
+      <button id="splash-start" type="button">START</button>
+      <button id="splash-daily" type="button">DAILY CHALLENGE</button>
+      <button id="splash-chart" type="button">STAR CHART · <span id="splash-balance">0</span><i class="dust-mark"></i></button>
+      <div class="splash-note">Free. Always. No ads, no paywalls.</div>
+    </div>
+  </div>
 
   <!-- game over -->
   <div id="gameover" class="hidden">
