@@ -48,9 +48,9 @@ body {
   opacity: .9;
 }
 
-/* grain — de-digitizes the flat gradients */
+/* grain — de-digitizes the flat gradients; sits above the splash/overlays too */
 #grain {
-  position: fixed; inset: 0; z-index: 9; pointer-events: none;
+  position: fixed; inset: 0; z-index: 100; pointer-events: none;
   opacity: .05; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -138,49 +138,68 @@ body {
 }
 #game { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
 
-/* splash / home — same quiet card language; the entry point before a run */
+/* splash / home — a 1970s-NASA-poster title plate: hard-left wordmark, one
+   editorial eyebrow, the orbital-ring motif bleeding off a corner. Asymmetric
+   on purpose; no centred hero, no stacked pills, no self-narrating copy. */
 #splash {
-  position: fixed; inset: 0; z-index: 10;
-  display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(140% 100% at 50% -18%, #3a2942 0%, #221629 50%, #100a16 100%);
-  padding: 24px;
+  position: fixed; inset: 0; z-index: 10; overflow: hidden;
+  display: flex; align-items: center;
+  background: radial-gradient(120% 90% at 82% -12%, #43314f 0%, #271a30 46%, #100a16 100%);
 }
-.splash-card {
-  width: min(360px, 100%); text-align: center;
-  animation: rise .22s cubic-bezier(.2,.7,.2,1) both;
+/* signature motif: concentric orbital rings, off-centre, bleeding off the corner */
+.splash-rings {
+  position: absolute; top: -24vmin; right: -24vmin;
+  width: 88vmin; height: 88vmin; border-radius: 50%; pointer-events: none;
+  border: 1.5px solid rgba(240,136,62,.45);
 }
-.splash-brand {
-  font-family: var(--display); font-weight: 800; font-size: clamp(32px, 9vw, 44px);
-  letter-spacing: 1px; line-height: .95; color: var(--paper);
-  display: flex; align-items: center; justify-content: center; gap: 12px;
+.splash-rings::before {
+  content: ''; position: absolute; inset: 12vmin; border-radius: 50%;
+  border: 1px solid rgba(75,179,156,.38);
 }
-.splash-brand .orbit { width: 18px; height: 18px; }
-.splash-tag { font-size: 11px; line-height: 1.6; letter-spacing: 1px; color: var(--muted); margin-top: 14px; }
-.splash-best { font-size: 10px; letter-spacing: 2px; color: var(--teal); margin-top: 18px; }
-.splash-best #splash-best-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+.splash-rings::after {
+  content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--marigold); top: -8px; left: 32%;
+  box-shadow: 0 0 0 5px #1a1222; /* punch-out so the dot reads as orbiting the ring */
+}
+.splash-inner {
+  position: relative; z-index: 1;
+  padding: 0 24px 0 clamp(26px, 8vw, 90px); max-width: 600px;
+  animation: rise .24s cubic-bezier(.2,.7,.2,1) both;
+}
+.splash-eyebrow {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 6px; color: var(--marigold); margin-bottom: 16px;
+}
+.splash-title {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(56px, 17vw, 104px); line-height: .82; letter-spacing: 1px;
+  color: var(--paper);
+}
+.splash-sub {
+  font-family: var(--mono); font-size: clamp(12px, 3.4vw, 15px); line-height: 1.5;
+  color: var(--muted); margin-top: 22px; max-width: 24ch;
+}
+.splash-actions { margin-top: 38px; display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
 #splash-start {
-  display: block; width: 100%; margin: 24px auto 0; padding: 15px 0; border: none; border-radius: 9px;
-  font-family: var(--mono); font-weight: 600; font-size: 15px; letter-spacing: 3px; cursor: pointer;
+  border: none; cursor: pointer; padding: 16px 54px; border-radius: 9px;
+  font-family: var(--mono); font-weight: 700; font-size: 16px; letter-spacing: 4px;
   color: #1a0f08; background: var(--marigold); box-shadow: 0 4px 0 var(--marigold-dim);
   transition: transform .04s, box-shadow .04s, background .1s;
 }
 #splash-start:hover { background: #ff954a; }
 #splash-start:active { transform: translateY(4px); box-shadow: 0 0 0 var(--marigold-dim); }
-#splash-daily {
-  display: block; width: 100%; margin: 10px auto 0; padding: 12px 0; border-radius: 9px;
-  font-family: var(--mono); font-weight: 600; font-size: 12px; letter-spacing: 2px; cursor: pointer;
-  color: var(--teal); background: none; border: 1px solid var(--teal);
-  transition: background .1s, color .1s;
+.splash-secondary { display: flex; gap: 24px; flex-wrap: wrap; }
+#splash-daily, #splash-chart {
+  background: none; border: none; cursor: pointer; padding: 3px 0;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px; color: var(--muted);
+  border-bottom: 1px solid transparent; transition: color .12s, border-color .12s;
+  display: inline-flex; align-items: center; gap: 4px;
 }
-#splash-daily:hover { background: var(--teal); color: #07120f; }
-#splash-chart {
-  display: inline-flex; align-items: center; gap: 3px; margin: 14px auto 0;
-  padding: 9px 18px; border: 1px solid var(--line); border-radius: 8px; background: none;
-  font-family: var(--mono); font-weight: 500; font-size: 11px; letter-spacing: 2px; cursor: pointer;
-  color: var(--muted); transition: color .12s, border-color .12s;
+#splash-daily:hover, #splash-chart:hover { color: var(--paper); border-color: var(--marigold); }
+.splash-best {
+  margin-top: 44px; font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--muted);
 }
-#splash-chart:hover { color: var(--paper); border-color: var(--teal); }
-.splash-note { font-size: 9px; letter-spacing: 1.5px; color: var(--muted); margin-top: 20px; }
+.splash-best b { color: var(--teal); font-weight: 600; font-size: 15px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
 
 /* game over — solid, quiet, on-brand. No blur, no glow, no big soft shadow. */
 #gameover {
@@ -212,7 +231,6 @@ body {
 }
 #restart:hover { background: #ff954a; }
 #restart:active { transform: translateY(4px); box-shadow: 0 0 0 var(--marigold-dim); }
-.go-note { font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-top: 16px; }
 .go-stats {
   display: flex; justify-content: center; gap: 16px; margin-top: 14px;
   font-size: 9px; letter-spacing: 1.5px; color: var(--muted);
@@ -235,23 +253,16 @@ body {
   vertical-align: middle; margin-left: 6px;
 }
 
-/* share score button — outlined teal, shown above daily-btn during daily runs */
-#share-btn {
-  display: block; margin: 10px auto 0; padding: 11px 28px; border-radius: 9px;
-  font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: 2px; cursor: pointer;
-  color: var(--paper); background: none; border: 1px solid rgba(241,230,208,.3);
-  transition: background .1s, color .1s;
+/* secondary actions — quiet text links under the primary PLAY AGAIN, matching
+   the splash. No stacked outline pills (that templated-button-stack tell). */
+.go-secondary { display: flex; justify-content: center; flex-wrap: wrap; gap: 22px; margin-top: 20px; }
+.go-secondary button {
+  background: none; border: none; cursor: pointer; padding: 3px 0;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px; color: var(--muted);
+  border-bottom: 1px solid transparent; transition: color .12s, border-color .12s;
+  display: inline-flex; align-items: center; gap: 4px;
 }
-#share-btn:hover { background: rgba(241,230,208,.1); }
-
-/* daily challenge button — teal outline, between PLAY AGAIN and STAR CHART */
-#daily-btn {
-  display: block; margin: 10px auto 0; padding: 11px 28px; border-radius: 9px;
-  font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: 2px; cursor: pointer;
-  color: var(--teal); background: none; border: 1px solid var(--teal);
-  transition: background .1s, color .1s;
-}
-#daily-btn:hover { background: var(--teal); color: #07120f; }
+.go-secondary button:hover { color: var(--paper); border-color: var(--marigold); }
 .go-daily {
   margin-top: 10px; font-size: 10px; letter-spacing: 2px;
   color: var(--teal); font-family: var(--mono);
@@ -261,16 +272,8 @@ body {
   color: var(--marigold); font-family: var(--mono);
 }
 
-/* secondary button — quiet outline, distinct from the marigold PLAY AGAIN */
-#open-chart {
-  display: inline-flex; align-items: center; gap: 2px; margin: 12px auto 0;
-  padding: 9px 18px; border: 1px solid var(--line); border-radius: 8px; background: none;
-  font-family: var(--mono); font-weight: 500; font-size: 11px; letter-spacing: 2px; cursor: pointer;
-  color: var(--muted); transition: color .12s, border-color .12s;
-}
-#open-chart:hover { color: var(--paper); border-color: var(--teal); }
-#open-chart.has-unlockable { color: var(--teal); border-color: var(--teal); animation: pulse-teal 1.8s ease-in-out infinite; }
-@keyframes pulse-teal { 0%,100% { box-shadow: 0 0 0 0 rgba(75,179,156,0); } 50% { box-shadow: 0 0 0 4px rgba(75,179,156,0.22); } }
+/* star-chart link highlights teal when something new is affordable */
+#open-chart.has-unlockable { color: var(--teal); border-bottom-color: var(--teal); }
 
 /* star chart — same quiet, solid card language as game over */
 #starchart {
