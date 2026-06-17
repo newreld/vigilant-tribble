@@ -18,14 +18,14 @@
   // ---- tiers: asteroid -> ... -> black hole (-> BIG BANG on max merge) -----
   const TIERS = [
     { name: 'Asteroid',   emoji: '🪨', r: 12,  color: '#9c8b7a' },
-    { name: 'Comet',      emoji: '☄️', r: 16,  color: '#7fd1ff' },
-    { name: 'Moon',       emoji: '🌑', r: 21,  color: '#cfd2d6' },
-    { name: 'Planet',     emoji: '🌍', r: 27,  color: '#4aa3ff' },
-    { name: 'Ringed',     emoji: '🪐', r: 35,  color: '#e0b86b' },
-    { name: 'Dwarf Star', emoji: '⭐', r: 44,  color: '#ffe066' },
-    { name: 'Star',       emoji: '☀️', r: 54,  color: '#ff9f40' },
-    { name: 'Galaxy',     emoji: '🌌', r: 65,  color: '#b56cff' },
-    { name: 'Black Hole', emoji: '⚫', r: 77,  color: '#1a1030' },
+    { name: 'Comet',      emoji: '☄️', r: 17,  color: '#7fd1ff' },
+    { name: 'Moon',       emoji: '🌑', r: 24,  color: '#cfd2d6' },
+    { name: 'Planet',     emoji: '🌍', r: 33,  color: '#4aa3ff' },
+    { name: 'Ringed',     emoji: '🪐', r: 43,  color: '#e0b86b' },
+    { name: 'Dwarf Star', emoji: '⭐', r: 53,  color: '#ffe066' },
+    { name: 'Star',       emoji: '☀️', r: 63,  color: '#ff9f40' },
+    { name: 'Galaxy',     emoji: '🌌', r: 71,  color: '#b56cff' },
+    { name: 'Black Hole', emoji: '⚫', r: 78,  color: '#1a1030' },
   ];
   const MAX_TIER = TIERS.length - 1;
   // triangular-ish scoring: bigger merges are worth disproportionately more
@@ -233,9 +233,9 @@
 
 
   // ---- field + physics constants ------------------------------------------
-  const FIELD_W = 360, FIELD_H = 600;
+  const FIELD_W = 360, FIELD_H = 500;
   const SPAWN_Y = 48;          // y of the hovering current piece
-  const DANGER_Y = 96;         // resting above this for too long = game over
+  const DANGER_Y = 108;        // resting above this for too long = game over
   const GRAVITY = 2200;        // units / s^2
   const RESTITUTION = 0.18;    // bounciness
   const DAMP = 0.992;          // velocity damping per substep
@@ -592,11 +592,21 @@
         const a = holes[i], c = holes[j];
         const rs = TIERS[MAX_TIER].r * 2;
         if (Math.hypot(c.x - a.x, c.y - a.y) < rs * MERGE_OVERLAP) {
-          // clear the whole field, huge bonus, fresh start of the board
-          const bonus = 8000 + world.bodies.length * 400;
+          // BIG BANG: a powerful blast that vaporises the two black holes and
+          // everything caught in the shockwave — but NOT the whole field, so the
+          // board still carries pressure and the run can genuinely be lost. A
+          // total clear made it a free reset and the game unloseable.
+          const mx = (a.x + c.x) / 2, my = (a.y + c.y) / 2;
+          const blastR = TIERS[MAX_TIER].r * 3.2;
+          const survivors = [], cleared = [];
+          for (const b of world.bodies) {
+            if (b === a || b === c || Math.hypot(b.x - mx, b.y - my) < blastR) cleared.push(b);
+            else survivors.push(b);
+          }
+          const bonus = 6000 + cleared.length * 400;
           world.score += bonus; if (world.score > world.best) world.best = world.score;
-          world.events.push({ type: 'bigbang', x: (a.x + c.x) / 2, y: (a.y + c.y) / 2, bonus });
-          world.bodies = [];
+          world.events.push({ type: 'bigbang', x: mx, y: my, bonus });
+          world.bodies = survivors;
           world.overTimer = 0;
           return;
         }
@@ -1081,9 +1091,9 @@
         // daily button: show replay hint if today's challenge was already played
         if (elDailyBtn) {
           if (meta.bestDailyDate === todayStr() && meta.bestDailyScore > 0) {
-            elDailyBtn.textContent = 'REPLAY DAILY · ' + meta.bestDailyScore.toLocaleString();
+            elDailyBtn.textContent = 'Replay daily · ' + meta.bestDailyScore.toLocaleString();
           } else {
-            elDailyBtn.textContent = 'DAILY CHALLENGE';
+            elDailyBtn.textContent = 'Daily challenge';
           }
         }
         // star chart button: highlight when new items are affordable

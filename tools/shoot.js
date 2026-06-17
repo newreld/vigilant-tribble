@@ -68,6 +68,21 @@ async function playDrops(page, name) {
       await ctx.close();
     }
 
+    // splash / home screen (the boot state, before dismissing it)
+    try {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+      const page = await ctx.newPage();
+      await page.goto(`http://localhost:${PORT}/index.html`, { waitUntil: 'load', timeout: 30000 });
+      await page.waitForTimeout(3000); // fonts + boot
+      // give the splash a best score so that line is visible
+      await page.evaluate(() => { const C = window.__cosmic; if (C) { C.meta.bestClassic = 12345; C.meta.stardust = 1850; } });
+      await page.reload({ waitUntil: 'load' });
+      await page.waitForTimeout(2500);
+      await page.screenshot({ path: 'screenshots/splash.png' });
+      console.log('  wrote screenshots/splash.png');
+      await ctx.close();
+    } catch (e) { console.log('  splash step skipped: ' + e.message); }
+
     // UI overlays: game-over card + Star Chart (driven via the exposed core)
     try {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
