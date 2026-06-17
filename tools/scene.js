@@ -42,13 +42,13 @@ for (let y = 0; y < Hh; y++) {
 // stars
 let s = seed * 99 + 1; const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
 for (let i = 0; i < 160; i++) { const x = (rnd() * W) | 0, y = (rnd() * Hh) | 0, b = 80 + rnd() * 150, j = (y * W + x) * 3; fb[j] = b; fb[j + 1] = b; fb[j + 2] = b * 1.05; }
-// exclusion zone — faint warm wash above the danger line + a fine light edge
-const dy = Math.round(DANGER_Y * SC), cream = [250, 241, 222];
+// exclusion zone — faint darker wash above the danger line + a subtle dark edge
+const dy = Math.round(DANGER_Y * SC), dark = [10, 6, 14];
 for (let y = 0; y < dy; y++) {
-  const k = 1 - y / dy, a = 0.13 * (0.15 + 0.85 * k); // strongest at the top, fading down
-  for (let x = 0; x < W; x++) { const i = (y * W + x) * 3; fb[i] += (cream[0] - fb[i]) * a; fb[i + 1] += (cream[1] - fb[i + 1]) * a; fb[i + 2] += (cream[2] - fb[i + 2]) * a; }
+  const k = 1 - y / dy, a = 0.32 * (0.1 + 0.9 * k); // strongest at the top, fading down
+  for (let x = 0; x < W; x++) { const i = (y * W + x) * 3; fb[i] += (dark[0] - fb[i]) * a; fb[i + 1] += (dark[1] - fb[i + 1]) * a; fb[i + 2] += (dark[2] - fb[i + 2]) * a; }
 }
-for (let x = 0; x < W; x++) { const i = (dy * W + x) * 3; fb[i] += (cream[0] - fb[i]) * 0.28; fb[i + 1] += (cream[1] - fb[i + 1]) * 0.28; fb[i + 2] += (cream[2] - fb[i + 2]) * 0.28; }
+for (let x = 0; x < W; x++) { const i = (dy * W + x) * 3; fb[i] += (dark[0] - fb[i]) * 0.4; fb[i + 1] += (dark[1] - fb[i + 1]) * 0.4; fb[i + 2] += (dark[2] - fb[i + 2]) * 0.4; }
 
 function drawBody(tier, cx, cy, R) {
   const ext = Math.ceil(R * GLOW_MAX);

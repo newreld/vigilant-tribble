@@ -1116,8 +1116,8 @@
       ctx.restore();
     }
     // exclusion zone — the strip above the danger line is "no resting allowed"
-    // territory, marked by a distinct background (a faint warm wash) rather
-    // than a hard rule. Its lower edge carries only a fine light hairline.
+    // territory, marked by a faint *darker* wash of the field rather than a
+    // hard rule; its lower edge carries only a very subtle dark hairline.
     // The whole zone warms to red as the grace timer ticks.
     const danger = world.overTimer > 0.05;
     if (danger && !prevDanger) blip(55, 0.25, 'sine', 0.07); // low warning thud on onset
@@ -1129,14 +1129,14 @@
         zoneGrad.addColorStop(0.7, 'rgba(210,74,44,0.14)');
         zoneGrad.addColorStop(1, 'rgba(210,74,44,0.05)');
       } else {
-        zoneGrad.addColorStop(0, 'rgba(250,241,222,0.13)');
-        zoneGrad.addColorStop(0.7, 'rgba(250,241,222,0.06)');
-        zoneGrad.addColorStop(1, 'rgba(250,241,222,0.02)');
+        zoneGrad.addColorStop(0, 'rgba(10,6,14,0.32)');
+        zoneGrad.addColorStop(0.7, 'rgba(10,6,14,0.13)');
+        zoneGrad.addColorStop(1, 'rgba(10,6,14,0.03)');
       }
       ctx.fillStyle = zoneGrad;
       ctx.fillRect(0, 0, FIELD_W, DANGER_Y);
-      // fine light hairline at the lower edge
-      ctx.fillStyle = danger ? 'rgba(210,74,44,0.7)' : 'rgba(250,241,222,0.28)';
+      // very subtle dark hairline at the lower edge
+      ctx.fillStyle = danger ? 'rgba(210,74,44,0.6)' : 'rgba(10,6,14,0.4)';
       ctx.fillRect(0, DANGER_Y - 0.5, FIELD_W, 1);
     } catch (_) {}
     // danger vignette — red edge bleed builds up as the grace timer ticks
@@ -1204,12 +1204,16 @@
         ctx.setLineDash([]); ctx.globalAlpha = 1;
       }
       drawBody(world.current.x, ghostY, world.current.tier, true);
-      // aim guide — fine, closely-spaced dots so the drop line reads as a
-      // delicate sight rather than a heavy rule.
-      ctx.fillStyle = 'rgba(255,255,255,0.26)';
-      for (let yy = ghostY + 5; yy < FIELD_H; yy += 6) {
-        ctx.beginPath(); ctx.arc(world.current.x, yy, 0.7, 0, Math.PI * 2); ctx.fill();
-      }
+      // aim guide — a very fine 1,2 dotted hairline so the drop line reads as
+      // a delicate sight rather than a heavy rule.
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.26)';
+      ctx.lineWidth = 0.8; ctx.setLineDash([1, 2]);
+      ctx.beginPath();
+      ctx.moveTo(world.current.x, ghostY + 5);
+      ctx.lineTo(world.current.x, FIELD_H);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // first-drop hint — vanishes the moment the player drops their first piece
