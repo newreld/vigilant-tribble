@@ -149,13 +149,18 @@ body {
 }
 /* signature motif: concentric orbital rings + dot, bleeding off the top-right */
 .splash-rings { position: absolute; top: 0; right: 0; width: 0; height: 0; pointer-events: none; }
+/* offsets are a fixed fraction of the (capped) diameter so the rings stay
+   anchored to the top-right corner at every width — using raw vw for the
+   offsets flings them off-screen on desktop once the diameter hits its cap. */
 .splash-rings::before {
-  content: ''; position: absolute; width: 135vw; height: 135vw; max-width: 560px; max-height: 560px;
-  right: -33vw; top: -55vw; border-radius: 50%; border: 1.5px solid rgba(240,136,62,.45);
+  content: ''; --d: min(135vw, 560px); position: absolute; width: var(--d); height: var(--d);
+  right: calc(var(--d) * -0.244); top: calc(var(--d) * -0.407);
+  border-radius: 50%; border: 1.5px solid rgba(240,136,62,.45);
 }
 .splash-rings::after {
-  content: ''; position: absolute; width: 83vw; height: 83vw; max-width: 345px; max-height: 345px;
-  right: -10vw; top: -28vw; border-radius: 50%; border: 1px solid rgba(75,179,156,.38);
+  content: ''; --d: min(83vw, 345px); position: absolute; width: var(--d); height: var(--d);
+  right: calc(var(--d) * -0.121); top: calc(var(--d) * -0.337);
+  border-radius: 50%; border: 1px solid rgba(75,179,156,.38);
 }
 .splash-eyebrow {
   position: relative; z-index: 1;
