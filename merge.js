@@ -233,9 +233,9 @@
 
 
   // ---- field + physics constants ------------------------------------------
-  const FIELD_W = 360, FIELD_H = 460;
+  const FIELD_W = 360, FIELD_H = 520;
   const SPAWN_Y = 48;          // y of the hovering current piece
-  const DANGER_Y = 120;        // resting above this for too long = game over
+  const DANGER_Y = 108;        // resting above this for too long = game over
   const GRAVITY = 2200;        // units / s^2
   const RESTITUTION = 0.18;    // bounciness
   const DAMP = 0.992;          // velocity damping per substep
@@ -243,29 +243,14 @@
   const SOLVER_ITERS = 6;
   const MERGE_OVERLAP = 1.02;  // merge on contact (solver rests bodies at ~touching)
   const DROP_COOLDOWN = 0.35;  // s between drops
-  const OVER_GRACE = 0.9;      // s a body may sit above the danger line
-  // Difficulty ramp: a fixed 0-3 pool the whole run means center-stacking
-  // never gets harder, because merges keep consolidating away the clutter —
-  // a long run should keep demanding more of the field. The pool widens with
-  // world.drops, gradually mixing in bigger bodies that don't tuck into a
-  // tidy single column. Early drops stay exactly the old fixed pool (a fresh
-  // run is never unfair); the ramp matters only once a run runs long.
-  // Every pool keeps at least one tier-0 so a stranded lone asteroid can
-  // always eventually be paired off and cleared — its weight just thins out
-  // over a run as bigger bodies crowd in, rather than vanishing entirely.
-  const DROP_POOLS = [
-    { at: 0,   pool: [0, 0, 0, 0, 1, 1, 1, 2, 2, 3] },
-    { at: 12,  pool: [0, 0, 0, 1, 1, 2, 2, 3, 3, 4] },
-    { at: 28,  pool: [0, 0, 1, 1, 2, 2, 3, 3, 4, 5] },
-    { at: 48,  pool: [0, 1, 1, 2, 2, 3, 3, 4, 4, 5] },
-    { at: 75,  pool: [0, 1, 2, 2, 3, 3, 4, 4, 5, 6] },
-    { at: 130, pool: [0, 1, 2, 3, 3, 4, 4, 5, 6, 7] },
-  ];
-  function dropPool() {
-    let pool = DROP_POOLS[0].pool;
-    for (const p of DROP_POOLS) if (world.drops >= p.at) pool = p.pool;
-    return pool;
-  }
+  const OVER_GRACE = 1.1;      // s a body may sit above the danger line
+  // Spawn pool: ONLY the smallest tiers, fixed for the whole run (classic Suika).
+  // The player is never handed big bodies — those are earned by merging. All the
+  // difficulty comes from the pile you build up, not from unplaceable spawns.
+  // (An earlier "ramp" that spawned ever-bigger bodies turned the mid-game into
+  // an unwinnable cliff; removed.)
+  const SPAWN_POOL = [0, 0, 0, 1, 1, 1, 2, 2, 3];
+  function dropPool() { return SPAWN_POOL; }
   const SCORE_MILESTONES = [[1000,'KILO-MERGE'],[5000,'MEGA-MERGE'],[10000,'GIGA-MERGE'],[25000,'TERA-MERGE'],[50000,'PETA-MERGE'],[100000,'EXA-MERGE']];
 
   // Daily seed: deterministic from YYYY-MM-DD so every player gets the same run today.
@@ -433,9 +418,28 @@
       world.modified = false;
     }
     if (seed != null) world.rng = mulberry32(seed >>> 0);
+    seedBoard();
     world.next = pickTier();
     world.next2 = pickTier();
     spawnCurrent();
+  }
+
+  // Seed a small starting pile so a run opens in the meaningful "manage a board"
+  // state instead of an empty canvas (which made the first ~20 drops feel like a
+  // pointless clicker). A single low row of mixed small tiers: enough texture to
+  // plan around and merge into immediately, never enough to threaten the line.
+  function seedBoard() {
+    const SEED_N = 7, slot = FIELD_W / SEED_N;
+    let prev = -1;
+    for (let i = 0; i < SEED_N; i++) {
+      // mixed small/mid tiers, avoiding repeats so they don't all instantly merge —
+      // gives an opening board with real structure to plan around and merge into
+      let tier; do { tier = [0, 1, 1, 2, 2, 3][Math.floor(world.rng() * 6)]; } while (tier === prev && world.rng() < 0.7);
+      prev = tier;
+      const r = TIERS[tier].r;
+      const x = Math.max(r, Math.min(FIELD_W - r, slot * (i + 0.5) + (world.rng() - 0.5) * slot * 0.3));
+      world.bodies.push({ id: world.idSeq++, tier, x, y: FIELD_H - r, vx: 0, vy: 0, age: 1 });
+    }
   }
 
   function spawnCurrent() {

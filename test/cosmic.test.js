@@ -12,7 +12,9 @@ const stepN = (n, h = 1 / 120) => { for (let i = 0; i < n; i++) C.step(h); };
 
 // --- 1. reset + spawn ----------------------------------------------------
 C.reset(12345);
-ok(C.world.bodies.length === 0, 'reset clears the field');
+ok(C.world.bodies.length > 0, 'reset seeds a small starting pile (opening has structure)');
+ok(C.world.bodies.every(b => b.tier <= 3), 'seeded bodies are all small tiers');
+ok(C.world.bodies.every(b => b.y - T[b.tier].r > C.DANGER_Y), 'seeded bodies rest well below the danger line');
 ok(C.world.current && typeof C.world.current.tier === 'number', 'a current piece is spawned');
 ok(typeof C.world.next === 'number', 'a next piece is queued');
 ok(typeof C.world.next2 === 'number', 'a next2 look-ahead piece is queued');
@@ -20,10 +22,10 @@ ok(C.world.score === 0 && C.world.over === false, 'reset zeroes score and clears
 
 // --- 2. dropping adds a falling body -------------------------------------
 C.reset(1);
-const beforeDrop = C.world.bodies.length;
+C.world.bodies = []; // clear the starting pile to test the dropped body in isolation
 C.moveCurrent(W / 2);
 ok(C.dropCurrent() === true, 'dropCurrent succeeds');
-ok(C.world.bodies.length === beforeDrop + 1, 'a body is added to the field');
+ok(C.world.bodies.length === 1, 'a body is added to the field');
 const body = C.world.bodies[0];
 const y0 = body.y;
 stepN(10);
@@ -31,6 +33,7 @@ ok(body.y > y0, 'gravity pulls the dropped body downward');
 
 // --- 3. walls keep bodies inside the field -------------------------------
 C.reset(2);
+C.world.bodies = []; // isolate the wall-clamp check from the starting pile
 C.moveCurrent(99999);                // try to shove it past the right wall
 C.dropCurrent();
 stepN(60);
@@ -106,28 +109,22 @@ let allLow = true;
 for (let i = 0; i < 200; i++) { if (C.pickTier() > 3) allLow = false; }
 ok(allLow, 'only low tiers (0-3) ever spawn — you build up, you are never handed a win');
 
-// --- 9b. difficulty ramp: a long run widens the spawn pool ----------------
-// A fixed pool the whole run lets center-stacking stay easy forever (merges
-// keep consolidating away the clutter). The pool should widen with
-// world.drops so a long run keeps demanding more of the field — while a
-// fresh run (low drops) stays exactly the gentle low-tier pool above.
+// --- 9b. spawn pool is fixed & small for the whole run (no big handouts) ----
+// The player is only ever fed small tiers; big bodies are EARNED by merging,
+// never spawned. Difficulty must come from the pile you build, not from being
+// handed unplaceable objects — so the pool must NOT escalate with world.drops.
+// (An earlier ramp spawned ever-bigger bodies and turned the mid-game into an
+// unwinnable cliff.)
 C.reset(8);
 C.world.drops = 0;
-let earlyMax = 0, earlyZeros = 0;
-for (let i = 0; i < 600; i++) { const t = C.pickTier(); earlyMax = Math.max(earlyMax, t); if (t === 0) earlyZeros++; }
-ok(earlyMax <= 3, 'a fresh run (drops=0) still only ever sees tiers 0-3');
-C.world.drops = 100;
-let midMax = 0;
-for (let i = 0; i < 400; i++) midMax = Math.max(midMax, C.pickTier());
-ok(midMax > earlyMax, 'a run 100 drops in already widens the spawn pool to bigger tiers');
-C.world.drops = 200;
-let lateMax = 0, lateZeros = 0;
-for (let i = 0; i < 600; i++) { const t = C.pickTier(); lateMax = Math.max(lateMax, t); if (t === 0) lateZeros++; }
-ok(lateMax > midMax, 'a very long run (200+ drops) keeps escalating past the mid-run pool');
-// tier-0 must never vanish — a lone stranded asteroid always needs a partner
-// to clear, so the pool keeps a trickle of them forever, just rarer over time.
-ok(lateZeros > 0, 'tier-0 still spawns deep in a run so a lone asteroid is always clearable');
-ok(earlyZeros > lateZeros, 'but tier-0 thins out over a run as bigger bodies crowd in');
+let earlyMax = 0; for (let i = 0; i < 600; i++) earlyMax = Math.max(earlyMax, C.pickTier());
+C.world.drops = 300;
+let lateMax = 0; for (let i = 0; i < 600; i++) lateMax = Math.max(lateMax, C.pickTier());
+ok(earlyMax <= 3, 'spawns are only ever tiers 0-3');
+ok(lateMax === earlyMax, 'the spawn pool never escalates with drops (no big-object ramp)');
+// tier-0 is always in the pool so a stranded lone asteroid can always be paired
+let sawZero = false; for (let i = 0; i < 200; i++) if (C.pickTier() === 0) sawZero = true;
+ok(sawZero, 'tier-0 keeps spawning so a lone asteroid is always clearable');
 
 // --- 9c. edge aim mapping: the piece centre tracks the pointer 1:1 ---------
 // No size-dependent scaling: pointing at a spot puts the centre exactly there
