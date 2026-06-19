@@ -126,35 +126,26 @@ ok(lateMax === earlyMax, 'the spawn pool never escalates with drops (no big-obje
 let sawZero = false; for (let i = 0; i < 200; i++) if (C.pickTier() === 0) sawZero = true;
 ok(sawZero, 'tier-0 keeps spawning so a lone asteroid is always clearable');
 
-// --- 9c. edge aim mapping: the piece CENTRE can reach the playfield edge ----
-// The centre tracks the pointer 1:1 (no size-dependent scaling) and can be
-// aimed all the way to the wall (x in [0, FIELD_W]) regardless of piece size,
-// so you can tuck into a corner. The body still can't REST past a wall — the
-// solver pushes it flush on drop.
+// --- 9c. edge aim mapping: the piece centre tracks the pointer 1:1 ---------
+// No size-dependent scaling: pointing at a spot puts the centre exactly there
+// (so the aim line never drifts off your finger), clamped only so a body can't
+// rest past a wall — its edge sits flush at the extremes.
 C.reset(8);
 const bigR = C.TIERS[C.MAX_TIER].r;
 C.world.current = { tier: C.MAX_TIER, x: C.FIELD_W / 2 };
 C.moveCurrent(150);
 ok(C.world.current.x === 150, 'the centre goes exactly where you point (no scaling/drift)');
 C.moveCurrent(0);
-ok(C.world.current.x === 0, 'a big piece can aim its centre to the left edge');
+ok(C.world.current.x === bigR, 'pointing past the left wall clamps a big piece flush left');
 C.moveCurrent(C.FIELD_W);
-ok(C.world.current.x === C.FIELD_W, 'a big piece can aim its centre to the right edge');
-C.moveCurrent(99999);
-ok(C.world.current.x === C.FIELD_W, 'aiming past the edge clamps the centre to the edge');
-// a small piece tracks the SAME points 1:1 — size no longer changes the reach.
+ok(C.world.current.x === C.FIELD_W - bigR, 'pointing past the right wall clamps a big piece flush right');
+// a small piece tracks the SAME point 1:1 too — both pieces reach a given
+// target identically; only their flush limit differs by radius.
 C.world.current = { tier: 0, x: C.FIELD_W / 2 };
 C.moveCurrent(150);
 ok(C.world.current.x === 150, 'a small piece tracks the same point 1:1 as a big one');
 C.moveCurrent(0);
-ok(C.world.current.x === 0, 'a small piece can aim its centre to the edge too');
-// dropping a big piece aimed into the wall still rests it flush (solver clamp)
-C.world.bodies = [];
-C.world.current = { tier: C.MAX_TIER, x: 0 };
-C.world.dropTimer = 0;
-C.dropCurrent();
-stepN(60);
-ok(C.world.bodies[0].x >= bigR - 0.5, 'a corner-aimed body still rests flush inside the wall');
+ok(C.world.current.x === C.TIERS[0].r, 'a small piece can rest nearer the wall (smaller flush limit)');
 
 // --- 10. Supernova: an in-run, earned clear (no meta-progression) --------
 C.reset(11);
