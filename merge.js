@@ -853,9 +853,14 @@
     canvas.width = availW * dpr; canvas.height = availH * dpr;
     // inset the field so it never touches the canvas edge — the margin frames
     // it and leaves room for the corner rounding, border and drop shadow.
-    scale = Math.min((availW - 2 * FIELD_MARGIN) / FIELD_W, (availH - 2 * FIELD_MARGIN) / FIELD_H);
+    // On desktop-width viewports give the field extra room BELOW it (so the pile
+    // doesn't sit at the very bottom edge); phones stay compact, near the edge.
+    const mTop = FIELD_MARGIN;
+    const mBot = availW >= 640 ? Math.round(Math.min(availH * 0.12, 120)) : FIELD_MARGIN;
+    const usableH = availH - mTop - mBot;
+    scale = Math.min((availW - 2 * FIELD_MARGIN) / FIELD_W, usableH / FIELD_H);
     offX = (availW - FIELD_W * scale) / 2;
-    offY = (availH - FIELD_H * scale) / 2;
+    offY = mTop + (usableH - FIELD_H * scale) / 2;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   }
