@@ -272,7 +272,7 @@ button.splash-stat:hover .splash-stat-val { color: var(--paper); }
    motif (no emoji). */
 .dust-mark {
   display: inline-block; width: 9px; height: 9px; vertical-align: middle; margin: 0 2px;
-  background: var(--teal);
+  background: var(--marigold);
   clip-path: polygon(50% 0, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0 50%, 41% 41%);
 }
 
