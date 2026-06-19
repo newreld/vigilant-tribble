@@ -450,20 +450,20 @@
 
   function moveCurrent(x) {
     if (!world.current) return;
-    const r = TIERS[world.current.tier].r;
-    // The aim line tracks the pointer 1:1 — the piece's centre goes exactly
-    // where you point, clamped only so the body can't rest past a wall (its
-    // edge sits flush against the wall at the extremes). No size-dependent
-    // scaling: a big piece and a small piece both follow your finger the same.
-    world.current.x = Math.max(r, Math.min(FIELD_W - r, x));
+    // The aim line tracks the pointer 1:1 and the piece's CENTRE can be aimed
+    // all the way to the playfield edge (x in [0, FIELD_W]) — so you can tuck a
+    // body hard into a corner instead of being stopped a radius short. The body
+    // can't actually rest past a wall: the solver clamps resting bodies to
+    // [r, FIELD_W - r], so a piece aimed into the wall settles flush on drop.
+    world.current.x = Math.max(0, Math.min(FIELD_W, x));
   }
 
   function dropCurrent() {
     if (world.over || !world.current || world.dropTimer > 0) return false;
-    const t = world.current.tier, r = TIERS[t].r;
+    const t = world.current.tier;
     world.bodies.push({
       id: world.idSeq++, tier: t,
-      x: Math.max(r, Math.min(FIELD_W - r, world.current.x)),
+      x: Math.max(0, Math.min(FIELD_W, world.current.x)),
       y: SPAWN_Y, vx: 0, vy: 0, age: 0,
     });
     world.current = null;
