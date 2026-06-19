@@ -60,23 +60,25 @@
 
   <!-- splash / home: explore the chart and start a run without losing first -->
   <div id="splash">
-    <div class="splash-rings" aria-hidden="true"></div>
-    <div class="splash-eyebrow">DEEP-SPACE</div>
-    <div class="splash-main">
-      <h1 class="splash-title">COSMIC<br>MERGE</h1>
-      <p class="splash-sub">Drop worlds.<br>Stack them.<br>Collapse a galaxy.</p>
-      <button id="splash-start" type="button">START</button>
-      <button id="splash-daily" type="button">Daily Challenge</button>
-      <button id="splash-chart" type="button">Star Chart</button>
-    </div>
-    <div class="splash-footer">
-      <div class="splash-stat">
-        <span class="splash-stat-label best">Your best</span>
-        <span class="splash-stat-val best" id="splash-best-val">0</span>
+    <div class="splash-inner">
+      <div class="splash-rings" aria-hidden="true"><span class="splash-orb"></span></div>
+      <div class="splash-eyebrow">DEEP-SPACE</div>
+      <div class="splash-main">
+        <h1 class="splash-title">COSMIC<br>MERGE</h1>
+        <p class="splash-sub">Drop worlds.<br>Stack them.<br>Collapse a galaxy.</p>
+        <button id="splash-start" type="button">START</button>
+        <button id="splash-daily" type="button">Daily Challenge</button>
       </div>
-      <div class="splash-stat">
-        <span class="splash-stat-label">Star dust</span>
-        <span class="splash-stat-val"><span id="splash-balance">0</span> <i class="dust-mark"></i></span>
+      <div class="splash-footer">
+        <div class="splash-stat">
+          <span class="splash-stat-label best">Your best</span>
+          <span class="splash-stat-val best" id="splash-best-val">0</span>
+        </div>
+        <div class="splash-stat">
+          <span class="splash-stat-label">Star dust</span>
+          <span class="splash-stat-val"><span id="splash-balance">0</span> <i class="dust-mark"></i></span>
+        </div>
+        <button id="splash-chart" type="button">Star chart</button>
       </div>
     </div>
   </div>

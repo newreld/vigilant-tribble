@@ -143,34 +143,42 @@ body {
    top-right, primary START + outlined Daily Challenge, and a footer of stats. */
 #splash {
   position: fixed; inset: 0; z-index: 10; overflow: hidden;
-  display: flex; flex-direction: column;
-  padding: clamp(40px, 6vh, 56px) 28px clamp(28px, 4.5vh, 44px);
+  display: flex; justify-content: center;
   background: linear-gradient(180deg, #43314F 0%, #271A30 49.52%, #100A16 100%);
 }
-/* signature motif: concentric orbital rings + dot, bleeding off the top-right */
-.splash-rings { position: absolute; top: 0; right: 0; width: 0; height: 0; pointer-events: none; }
-/* offsets are a fixed fraction of the (capped) diameter so the rings stay
-   anchored to the top-right corner at every width — using raw vw for the
-   offsets flings them off-screen on desktop once the diameter hits its cap. */
-.splash-rings::before {
-  content: ''; --d: min(135vw, 560px); position: absolute; width: var(--d); height: var(--d);
-  right: calc(var(--d) * -0.244); top: calc(var(--d) * -0.407);
+/* phone-width poster column, centred so the layout holds on desktop instead of
+   hard-left-overflowing; rings/eyebrow/footer all anchor to THIS column. */
+.splash-inner {
+  position: relative; width: 100%; max-width: 440px; box-sizing: border-box;
+  display: flex; flex-direction: column;
+  padding: clamp(40px, 6vh, 56px) 28px clamp(28px, 4.5vh, 44px);
+}
+/* signature motif: concentric orbital rings sharing one centre (--cx,--cy from
+   the column's top-right corner), with the marigold star sitting exactly at that
+   centre. Positioning each ring as centre-minus-radius keeps them concentric. */
+.splash-rings {
+  position: absolute; top: 0; right: 0; width: 0; height: 0; pointer-events: none;
+  --cx: 40px; --cy: 54px;
+}
+.splash-rings::before { /* outer orange orbit, r = 280 */
+  content: ''; position: absolute; width: 560px; height: 560px;
+  right: calc(var(--cx) - 280px); top: calc(var(--cy) - 280px);
   border-radius: 50%; border: 1.5px solid rgba(240,136,62,.45);
 }
-.splash-rings::after {
-  content: ''; --d: min(83vw, 345px); position: absolute; width: var(--d); height: var(--d);
-  right: calc(var(--d) * -0.121); top: calc(var(--d) * -0.337);
+.splash-rings::after { /* inner teal orbit, r = 172.5 */
+  content: ''; position: absolute; width: 345px; height: 345px;
+  right: calc(var(--cx) - 172.5px); top: calc(var(--cy) - 172.5px);
   border-radius: 50%; border: 1px solid rgba(75,179,156,.38);
+}
+.splash-orb { /* the marigold star, centred on the orbits */
+  position: absolute; width: 22px; height: 22px; border-radius: 50%;
+  right: calc(var(--cx) - 11px); top: calc(var(--cy) - 11px);
+  background: var(--marigold);
 }
 .splash-eyebrow {
   position: relative; z-index: 1;
   font-family: var(--mono); font-size: 11px; font-weight: 600;
   letter-spacing: 6px; color: var(--marigold);
-}
-/* the orbiting dot, anchored near the rings' top-right */
-.splash-eyebrow::after {
-  content: ''; position: absolute; top: 0; right: 4px; width: 22px; height: 22px;
-  border-radius: 50%; background: var(--marigold);
 }
 .splash-main {
   position: relative; z-index: 1; margin-top: auto; margin-bottom: auto;
@@ -185,7 +193,7 @@ body {
   font-family: var(--mono); font-size: clamp(13px, 3.6vw, 14px); line-height: 1.5;
   color: var(--muted); margin-top: 26px;
 }
-#splash-start, #splash-daily, #splash-chart {
+#splash-start, #splash-daily {
   width: 172px; max-width: 70vw; box-sizing: border-box; cursor: pointer; border-radius: 9px;
   font-family: var(--mono); text-align: center;
   box-shadow: 0 3px 10px rgba(0,0,0,.15);
@@ -196,16 +204,24 @@ body {
   transition: background .1s;
 }
 #splash-start:hover { background: #ff954a; }
-#splash-daily, #splash-chart {
+#splash-daily {
   margin-top: 14px; padding: 16px 0; border: 1px solid rgba(194,178,156,.5); background: none;
   font-weight: 400; font-size: 12px; letter-spacing: 1px; color: var(--muted);
   transition: color .12s, border-color .12s;
 }
-#splash-daily:hover, #splash-chart:hover { color: var(--paper); border-color: var(--muted); }
+#splash-daily:hover { color: var(--paper); border-color: var(--muted); }
 .splash-footer {
-  position: relative; z-index: 1; display: flex; gap: 48px;
+  position: relative; z-index: 1; display: flex; align-items: center; gap: clamp(16px, 5vw, 40px);
   padding-top: 18px; border-top: 1px solid #42304E;
 }
+/* Star Chart lives in the footer (per the refined design): outlined button, hard-right */
+#splash-chart {
+  margin-left: auto; cursor: pointer; box-sizing: border-box; border-radius: 9px;
+  padding: 12px 18px; border: 1px solid rgba(194,178,156,.5); background: none;
+  font-family: var(--mono); font-weight: 400; font-size: 12px; letter-spacing: 1px; color: var(--muted);
+  white-space: nowrap; transition: color .12s, border-color .12s;
+}
+#splash-chart:hover { color: var(--paper); border-color: var(--muted); }
 .splash-stat { display: flex; flex-direction: column; gap: 6px; background: none; border: none; padding: 0; text-align: left; cursor: default; }
 button.splash-stat { cursor: pointer; }
 .splash-stat-label { font-family: var(--mono); font-size: 12px; color: var(--muted); }
